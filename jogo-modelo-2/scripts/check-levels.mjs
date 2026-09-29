@@ -2,7 +2,7 @@
 // caminho do P até um X (BFS por tile) com a física aproximada dos três macacos.
 // Uso: npm run check
 import { SALAS } from '../src/levels/index.js';
-import { TIPOS_CHAO, LEGENDA_COISAS } from '../src/world/tiles.js';
+import { TIPOS_CHAO, LEGENDA_COISAS, LEGENDA_DECO } from '../src/world/tiles.js';
 
 // letras que a Frente A vai registrar (aceitas mesmo antes de entrarem na legenda)
 const LETRAS_FUTURAS = { V: 'drone vigia', K: 'drone construtor', W: 'andador' };
@@ -15,33 +15,36 @@ const MACACOS = {
   orlando: { velocidade: 4.2, pulo: 7.5, pulosNoAr: 0, planeio: true },
 };
 const FOLGA = 0.8; // usa só 80% do alcance horizontal teórico (margem de erro do jogador)
+const LETRAS_CHEFE = new Set(['W']); // a queda do chefe abre as portas da sala
 
 // simula o salto quadro a quadro, na mesma ordem do jogador.js + fisica.js
-// (planeio fixa vy = -1.5 antes da gravidade, então o afundar depende do quadro:
-// simulamos a 30 qps, o caso pessimista)
-function trajetoria(m) {
+// (o planeio compensa a gravidade do passo: a queda fica em -1,5 em qualquer qps)
+function trajetoria(m, folga = FOLGA) {
   const pts = [];
   let y = 0, vy = m.pulo, t = 0, noAr = m.pulosNoAr;
   const dt = 1 / 30;
   while (y > -4 && t < 4) {
     if (noAr > 0 && vy <= 0) { vy = m.pulo * 0.9; noAr--; }  // segundo pulo no ápice
-    if (m.planeio && vy < -1.5) vy = -1.5;
+    if (m.planeio && vy < -1.5) vy = -1.5 + GRAVIDADE * dt;
     vy -= GRAVIDADE * dt;
     y += vy * dt; t += dt;
-    pts.push({ x: m.velocidade * t * FOLGA, y });
+    pts.push({ x: m.velocidade * t * folga, y });
   }
   return pts;
 }
 const TRAJ = Object.fromEntries(Object.entries(MACACOS).map(([n, m]) => [n, trajetoria(m)]));
+// versão otimista (alcance total, degrau inteiro): usada para achar atalhos que a física permite
+const TRAJ_MAX = Object.fromEntries(Object.entries(MACACOS).map(([n, m]) => [n, trajetoria(m, 1)]));
 
 // o macaco `n` salta de um tile e alcança um tile a `vao` tiles vazios de distância
 // com diferença de altura `dh` (positivo = mais alto)?
-function alcanca(n, vao, dh) {
+function alcanca(n, vao, dh, otimista = false) {
   // precisa passar da borda (vao + 0.25) com o pé até MARGEM abaixo do topo
   // (a física aceita até DEGRAU = 0.55; usamos só 0.3 de folga)
-  const MARGEM = 0.3, alvoX = vao + 0.25;
-  if (vao === 0) return TRAJ[n].some((p) => p.y >= dh - MARGEM);
-  return TRAJ[n].some((p) => p.x >= alvoX && p.y >= dh - MARGEM);
+  const MARGEM = otimista ? DEGRAU : 0.3, alvoX = otimista ? vao + 0.1 : vao + 0.25;
+  const traj = (otimista ? TRAJ_MAX : TRAJ)[n];
+  if (vao === 0) return traj.some((p) => p.y >= dh - MARGEM);
+  return traj.some((p) => p.x >= alvoX && p.y >= dh - MARGEM);
 }
 
 const erros = [];
@@ -69,7 +72,20 @@ function checar(sala, idx) {
   const ps = itens.filter((x) => x.c === 'P'), xs = itens.filter((x) => x.c === 'X');
   if (ps.length !== 1) err(`precisa de exatamente 1 'P' (tem ${ps.length})`);
   if (!xs.length) err(`precisa de ao menos 1 'X'`);
-  if (itens.some((x) => x.c === 'D') && !itens.some((x) => x.c === 'L')) err(`tem porta 'D' sem alavanca 'L'`);
+  if (itens.some((x) => x.c === 'D') && !itens.some((x) => x.c === 'L' || LETRAS_CHEFE.has(x.c))) err(`tem porta 'D' sem alavanca 'L' (nem chefe)`);
+  if (sala.deco) {
+    const LEG = LEGENDA_DECO;
+    if (sala.deco.length !== alt) err(`deco tem ${sala.deco.length} linhas (chao tem ${alt})`);
+    let luzes = 0;
+    sala.deco.forEach((l, j) => {
+      if (l.length !== larg) err(`deco linha ${j} tem ${l.length} (esperado ${larg})`);
+      [...l].forEach((c, i) => {
+        if (c !== ' ' && c !== '.' && !LEG[c]) err(`deco desconhecida '${c}' em ${i},${j}`);
+        if ('bqa'.includes(c)) luzes++;
+      });
+    });
+    if (luzes > 4) avisos.push(`${nome}: ${luzes} luzes na deco (só as 4 mais importantes acendem)`);
+  }
   if (erros.some((e) => e.startsWith(nome)) || ps.length !== 1) return;
 
   // coisas não podem ficar em parede/vazio
@@ -81,32 +97,53 @@ function checar(sala, idx) {
   const tipo = (i, j) => (i < 0 || j < 0 || i >= larg || j >= alt) ? TIPOS_CHAO[' '] : TIPOS_CHAO[chao[j][i]];
   const letra = (i, j) => coisas[j]?.[i] ?? ' ';
   const pisavel = (i, j) => { const t = tipo(i, j); return !t.solido && !t.vazio; };
+  // modo "real": paredes e colunas são só blocos altos (como na física); porta = +3, selo = +2
+  const pisavelReal = (i, j) => !tipo(i, j).vazio;
+  const alturaReal = (i, j, portasAbertas, time) => {
+    let h = tipo(i, j).altura;
+    const c = letra(i, j);
+    if (c === 'D' && !portasAbertas) h += 3;
+    if (c === 'S' && !time.includes('hugo')) h += 2;
+    return h;
+  };
 
   // BFS com um conjunto de macacos; portas fecham até alguma alavanca ser alcançada;
   // selos só passam com o Hugo no time
-  function busca(time) {
+  function busca(time, real = false) {
     let portasAbertas = false;
     for (;;) {
       const visto = new Set([`${ps[0].i},${ps[0].j}`]);
       const fila = [[ps[0].i, ps[0].j]];
+      const pai = new Map();
       let achouAlavanca = false, achouSaida = false;
       while (fila.length) {
         const [i, j] = fila.shift();
-        if (letra(i, j) === 'X') achouSaida = true;
-        const h = tipo(i, j).altura;
+        if (letra(i, j) === 'X' && !achouSaida) {
+          achouSaida = true;
+          // caminho até a saída (para explicar atalhos)
+          const cam = [];
+          for (let k = `${i},${j}`; k; k = pai.get(k)) cam.unshift(k);
+          busca.caminho = cam;
+        }
+        const h = real ? alturaReal(i, j, portasAbertas, time) : tipo(i, j).altura;
         for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
           // alavanca: basta chegar ao lado (Agarrão tem alcance)
           if (letra(i + di, j + dj) === 'L' && time.includes('orlando')) achouAlavanca = true;
+          if (LETRAS_CHEFE.has(letra(i + di, j + dj))) achouAlavanca = true;
           for (let vao = 0; vao <= 10; vao++) {
             const ni = i + di * (vao + 1), nj = j + dj * (vao + 1);
             if (vao > 0 && !tipo(i + di * vao, j + dj * vao).vazio) break;
-            if (!pisavel(ni, nj)) continue;
-            if (letra(ni, nj) === 'D' && !portasAbertas) break;
-            if (letra(ni, nj) === 'S' && !time.includes('hugo')) break;   // só o Pulverizar quebra
-            const dh = tipo(ni, nj).altura - h;
-            const ok = (vao === 0 && dh <= DEGRAU) || time.some((n) => alcanca(n, vao, dh));
+            if (real) {
+              if (!pisavelReal(ni, nj)) continue;
+            } else {
+              if (!pisavel(ni, nj)) continue;
+              if (letra(ni, nj) === 'D' && !portasAbertas) break;
+              if (letra(ni, nj) === 'S' && !time.includes('hugo')) break;   // só o Pulverizar quebra
+            }
+            const dh = (real ? alturaReal(ni, nj, portasAbertas, time) : tipo(ni, nj).altura) - h;
+            const ok = (vao === 0 && dh <= DEGRAU) || time.some((n) => alcanca(n, vao, dh, real));
             const k = `${ni},${nj}`;
-            if (ok && !visto.has(k)) { visto.add(k); fila.push([ni, nj]); }
+            if (ok && !visto.has(k)) { visto.add(k); pai.set(k, `${i},${j}`); fila.push([ni, nj]); }
             break;
           }
         }
@@ -122,6 +159,15 @@ function checar(sala, idx) {
   if (!busca(todos)) return err('sem caminho do P até um X');
   // quem é indispensável (informativo)
   const precisa = todos.filter((n) => !busca(todos.filter((o) => o !== n)));
+  // atalhos: com a física de verdade (paredes escaláveis, selo +2, porta +3), dá para
+  // chegar à saída sem um macaco que o projeto da sala exige?
+  for (const n of precisa) {
+    const sem = todos.filter((o) => o !== n);
+    if (busca(sem, true)) {
+      const pontos = busca.caminho.filter((k) => { const [i, j] = k.split(',').map(Number); return tipo(i, j).solido || 'SD'.includes(letra(i, j)); });
+      avisos.push(`${nome}: ATALHO — a física deixa chegar à saída sem ${n}, passando por ${pontos.slice(0, 4).join(' ')} (paredes/colunas/selos/portas escaláveis)`);
+    }
+  }
   console.log(`ok  ${nome.padEnd(16)} ${larg}x${alt}  ${sala.nome ?? ''}${precisa.length ? '  · precisa: ' + precisa.join(', ') : ''}`);
 }
 

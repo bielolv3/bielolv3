@@ -9,6 +9,7 @@ import { renderizadorSoftware } from '../fx/pos.js';
 // atualização dos uniformes visuais do mundo uma vez por quadro.
 
 const COR_NEVOA = 0x8a6630;
+const _tamTela = new THREE.Vector2();
 
 export function montarAmbiente(jogo) {
   const cena = jogo.cena;
@@ -197,7 +198,7 @@ function criarCeu(jogo) {
     const agora = performance.now();
     const dt = Math.min(0.05, (agora - anterior) / 1000); anterior = agora;
     atualizarVisual(jogo, dt);
-    const tam = renderer.getSize(new THREE.Vector2());
+    const tam = renderer.getSize(_tamTela);
     mat.uniforms.uAspecto.value = tam.x / tam.y;
     mat.uniforms.uAltTela.value = tam.y;
     const cam = jogo.camera, a = cam.anguloAtual;

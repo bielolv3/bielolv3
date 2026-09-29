@@ -49,7 +49,7 @@ export function instalarInterface(jogo) {
     else if (acao === 'continuar') irPara('jogando');
     else if (acao === 'reiniciar' || acao === 'tentar') tentarDeNovo();
     else if (acao === 'som') jogo.audio?.alternarMudo();
-    else if (acao === 'denovo') { jogo.jogador = null; jogo.carregarSala(0); irPara('jogando'); }
+    else if (acao === 'denovo') { jogo.novoJogo(); irPara('jogando'); }
   }
 
   // Esc do jogo (evento 'pausa'): abre/fecha a tela de pausa; nas outras telas o jogo fica parado

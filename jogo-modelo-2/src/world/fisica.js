@@ -15,10 +15,17 @@ export function moverCorpo(mapa, corpo, dt) {
   const { pos, vel, raio } = corpo;
   vel.y -= GRAVIDADE * dt;
 
+  // só a borda da frente do movimento bloqueia: quem ficou encostado/entalado num
+  // bloco (beirada, selo reerguido, caixa) consegue sair andando para longe dele
   for (const eixo of ['x', 'z']) {
+    const passo = vel[eixo] * dt;
+    if (!passo) continue;
     const antes = pos[eixo];
-    pos[eixo] += vel[eixo] * dt;
-    const chao = alturaMaxSob(mapa, pos.x, pos.z, raio);
+    pos[eixo] += passo;
+    const s = passo > 0 ? raio : -raio;
+    const chao = eixo === 'x'
+      ? Math.max(mapa.alturaEm(pos.x + s, pos.z - raio), mapa.alturaEm(pos.x + s, pos.z + raio))
+      : Math.max(mapa.alturaEm(pos.x - raio, pos.z + s), mapa.alturaEm(pos.x + raio, pos.z + s));
     if (chao > pos.y + DEGRAU) { pos[eixo] = antes; vel[eixo] = 0; }
   }
 

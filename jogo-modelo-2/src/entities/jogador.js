@@ -3,6 +3,7 @@ import { Entidade } from './entidade.js';
 import { GRAVIDADE } from '../world/fisica.js';
 
 const BASE = import.meta.env.BASE_URL;
+const _direita = new THREE.Vector3();
 
 // Números de cada macaco. Mecânica de identidade/recurso/surto fica em habilidades.js.
 export const MACACOS = {
@@ -83,11 +84,13 @@ export class Jogador extends Entidade {
     this.fisica(dt);
 
     if (this.caiu) this.voltarAoUltimoChao();
-    else if (this.noChao) this.ultimoChao = this.pos.clone();
+    // só guarda chão firme sob o centro (não a beirada com o centro sobre o abismo)
+    else if (this.noChao && !this.jogo.mapa.vazioEm(this.pos.x, this.pos.z)) (this.ultimoChao ??= new THREE.Vector3()).copy(this.pos);
 
     // espelha o sprite conforme o lado da tela para onde anda
     if (this.sprite) {
-      const lado = new THREE.Vector3().copy(this.olhando).applyQuaternion(camera.cam.quaternion.clone().invert()).x;
+      // componente "direita da tela" de onde olha (sem alocar por quadro)
+      const lado = this.olhando.dot(_direita.setFromMatrixColumn(camera.cam.matrixWorld, 0));
       if (Math.abs(lado) > 0.2) this.sprite.scale.x = Math.abs(this.sprite.scale.x) * (lado < 0 ? -1 : 1);
     }
     this.sincronizar(dt);

@@ -28,8 +28,11 @@ function spriteAviso() {
   return s;
 }
 
+// devolve um vetor de rascunho (chamado todo quadro por inimigo): copie se for guardar
+const _dir = new THREE.Vector3();
+const EIXO_Y = new THREE.Vector3(0, 1, 0);
 const dirPara = (de, ate) => {
-  const d = new THREE.Vector3(ate.x - de.x, 0, ate.z - de.z);
+  const d = _dir.set(ate.x - de.x, 0, ate.z - de.z);
   return d.lengthSq() > 1e-6 ? d.normalize() : d.set(1, 0, 0);
 };
 
@@ -145,7 +148,7 @@ export class Inimigo extends Entidade {
 
   atirar(alvo, opts = {}, desvio = 0) {
     const d = dirPara(this.pos, alvo.pos);
-    if (desvio) d.applyAxisAngle(new THREE.Vector3(0, 1, 0), desvio);
+    if (desvio) d.applyAxisAngle(EIXO_Y, desvio);
     const y = this.pos.y + Math.min(0.8, this.altura * 0.55);
     this.jogo.adicionar(new Projetil(this.jogo, this.pos.x + d.x * this.raio, y, this.pos.z + d.z * this.raio, d, { autor: this, dano: this.dano, ...opts }));
   }

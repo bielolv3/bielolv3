@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import { Entidade } from './entidade.js';
 import { GRAVIDADE } from '../world/fisica.js';
+import { fixo } from '../core/liberar.js';
 
 // Projéteis, efeitos passageiros e o controle de corpos agarrados/arremessados.
 
-const geoBola = new THREE.SphereGeometry(1, 10, 8);
+const geoBola = fixo(new THREE.SphereGeometry(1, 10, 8));
 
 // Tiro reto (raio Quanta, bala de sentinela). Some ao bater no cenário.
 export class Projetil extends Entidade {

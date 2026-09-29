@@ -3,6 +3,7 @@ import { Particulas } from './particulas.js';
 import { criarPosProcesso } from './pos.js';
 import { criarTela } from './tela.js';
 import { aproximarDaCamera } from '../world/visual.js';
+import { fixo } from '../core/liberar.js';
 
 // Frente B: efeitos visuais (partículas, flashes, pós-processamento) como sistema.
 // Escuta jogo.eventos; para testar no console: jogo.eventos.emitir('morte', { alvo: jogo.jogador })
@@ -21,10 +22,14 @@ function posDe(d) {
 
 const geoArco = new THREE.RingGeometry(0.35, 0.8, 18, 1, -1.15, 2.3).rotateX(-Math.PI / 2);
 const geoAnel = new THREE.RingGeometry(0.85, 1, 40).rotateX(-Math.PI / 2);
+fixo(geoArco, geoAnel);
+const _tam = new THREE.Vector2();
 
 export function instalarEfeitos(jogo) {
   const faiscas = new Particulas(700, true);
   const poeira = new Particulas(700, false);
+  // os pontos passam de sala em sala
+  fixo(faiscas.pontos.geometry, faiscas.material, poeira.pontos.geometry, poeira.material);
   const transientes = [];   // { obj, t, dur, fn(obj, k) }
   let pos = null;
   const tela = criarTela(jogo);
@@ -126,13 +131,13 @@ export function instalarEfeitos(jogo) {
   jogo.adicionarSistema({
     aoCarregarSala(j) {
       faiscas.limpar(); poeira.limpar();
-      for (const t of transientes) t.obj.removeFromParent();
+      for (const t of transientes) { t.obj.removeFromParent(); t.obj.material?.dispose(); }
       transientes.length = 0;
       j.cena.add(faiscas.pontos, poeira.pontos);
       surtoEvento = false;
     },
     atualizar(dt, j) {
-      const esc = j.renderer.getDrawingBufferSize(new THREE.Vector2()).y / j.camera.tilesNaAltura;
+      const esc = j.renderer.getDrawingBufferSize(_tam).y / j.camera.tilesNaAltura;
       faiscas.material.uniforms.uEscala.value = poeira.material.uniforms.uEscala.value = esc;
       faiscas.atualizar(dt); poeira.atualizar(dt);
       for (let i = transientes.length - 1; i >= 0; i--) {

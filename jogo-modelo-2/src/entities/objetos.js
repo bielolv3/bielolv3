@@ -124,7 +124,9 @@ export class Selo extends Entidade {
   }
   // false se algo está em cima do tile
   reerguer() {
-    const ocupado = this.jogo.entidades.some((e) => e.time !== 'neutro' && !e.voa && Math.floor(e.pos.x) === this.i && Math.floor(e.pos.z) === this.j);
+    // qualquer corpo encostando no tile (não só com o centro nele) impede
+    const ocupado = this.jogo.entidades.some((e) => e.time !== 'neutro' && !e.voa && !e.removido
+      && Math.abs(e.pos.x - (this.i + .5)) < 0.5 + e.raio && Math.abs(e.pos.z - (this.j + .5)) < 0.5 + e.raio);
     if (!this.quebrado || ocupado) return false;
     this.quebrado = false;
     this.pilar.visible = true; this.entulho.visible = false;

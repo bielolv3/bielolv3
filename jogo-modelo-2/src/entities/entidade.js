@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { moverCorpo } from '../world/fisica.js';
+import { fixo } from '../core/liberar.js';
 
 const carregador = new THREE.TextureLoader();
 const cacheTex = new Map();
@@ -21,6 +22,7 @@ export function texturaPixel(url) {
 
 const geoSombra = new THREE.CircleGeometry(1, 20).rotateX(-Math.PI / 2);
 const matSombra = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35, depthWrite: false });
+fixo(geoSombra, matSombra);   // compartilhados: não liberar junto com a entidade
 
 // Base de tudo que se move/interage. Contrato usado pelo jogo:
 //   atualizar(dt)            chamado todo quadro enquanto !removido

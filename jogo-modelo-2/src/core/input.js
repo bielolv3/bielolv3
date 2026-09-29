@@ -34,7 +34,8 @@ export class Input {
       const a = MAPA_TECLAS[e.code];
       if (a) this.ativas.delete(a);
     });
-    addEventListener('blur', () => this.ativas.clear());
+    // perdeu o foco: nada fica "preso" apertado (teclas, botões de toque, joystick)
+    addEventListener('blur', () => { this.ativas.clear(); this.eixoToque.x = this.eixoToque.y = 0; });
   }
 
   // usado pelos controles de toque

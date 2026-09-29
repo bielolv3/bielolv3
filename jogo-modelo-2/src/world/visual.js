@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { atlasTiles, texturaSprite, LINHA, COLS, LINHAS, rngSemente } from './texturas.js';
 import { LEGENDA_DECO } from './tiles.js';
+import { fixo } from '../core/liberar.js';
 
 // Parte visual do tilemap: malha única do terreno (atlas pixel art, AO nos cantos,
 // paredes da frente rebaixadas conforme o ângulo da câmera, recorte pontilhado em volta
@@ -113,7 +114,7 @@ attribute vec4 aCel; attribute vec4 aCorteD; attribute float aBaixa; attribute f
       gl_FragColor.rgb = mix(gl_FragColor.rgb, uCorNevoa, smoothstep(-0.3, -3.6, vPosM.y) * 0.8);
       #include <fog_fragment>`);
   };
-  materialTerreno = mat;
+  materialTerreno = fixo(mat);
   return mat;
 }
 
@@ -281,10 +282,10 @@ const matSprite = new Map();
 function spriteDeco(nome, larg, { cor = 0xd8ccb4, profundidade = 0.25, aditivo = false } = {}) {
   const chave = nome + cor + aditivo;
   if (!matSprite.has(chave)) {
-    matSprite.set(chave, new THREE.SpriteMaterial({
+    matSprite.set(chave, fixo(new THREE.SpriteMaterial({
       map: texturaSprite(nome), color: cor, alphaTest: aditivo ? 0 : 0.5, transparent: aditivo,
       blending: aditivo ? THREE.AdditiveBlending : THREE.NormalBlending, depthWrite: !aditivo, fog: true,
-    }));
+    })));
   }
   const s = new THREE.Sprite(matSprite.get(chave));
   const tex = s.material.map;
@@ -316,6 +317,7 @@ const geoCristal = new THREE.OctahedronGeometry(0.16, 0).scale(1, 2.2, 1);
 const matCristal = new THREE.MeshLambertMaterial({ color: 0x2c6c70, emissive: 0x4fa6ab, emissiveIntensity: 1.6, flatShading: true });
 const matPedestal = new THREE.MeshLambertMaterial({ color: 0x3a4646, flatShading: true });
 const matBronze = new THREE.MeshLambertMaterial({ color: 0x5a4020, flatShading: true });
+fixo(geoPedrinha, matPedrinha, geoCristal, matCristal, matPedestal, matBronze);   // reaproveitados entre salas
 
 function brilho(cor, tam) {
   const s = spriteDeco('brilho', tam, { cor, profundidade: 0.8, aditivo: true });

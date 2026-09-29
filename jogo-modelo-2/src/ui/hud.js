@@ -183,7 +183,8 @@ export function criarHud(jogo, raiz) {
     bananas.style.display = mostraBananas ? '' : 'none';
 
     // barra do chefe
-    const vivo = chefe && !chefe.removido && chefe.vida > 0 && jogo.entidades.includes(chefe);
+    // chefe reativo (Matriarca) só mostra a barra enquanto está irritado
+    const vivo = chefe && !chefe.removido && chefe.vida > 0 && jogo.entidades.includes(chefe) && chefe.irritado !== false;
     chefeEl.classList.toggle('visivel', !!vivo);
     if (vivo) {
       chefeEl.querySelector('.rotulo').textContent = chefe.nome ?? 'Chefe';

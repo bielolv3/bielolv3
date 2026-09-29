@@ -1,5 +1,7 @@
 // Barramento simples: sistemas (HUD, áudio, partículas) escutam sem acoplar.
-// Eventos emitidos hoje: dano, morte, golpe, troca, derrota, vitoria, sala, coleta, surto
+// Eventos: dano, morte, golpe, troca, derrota, vitoria, sala, pausa, coleta, surto,
+// identidade, recurso, porta, selo, parry, alerta, cura, derrapa, quebra, empurrao,
+// investida, teleporte, explosao, chefe
 export class Eventos {
   constructor() { this.ouvintes = new Map(); }
   on(nome, fn) {

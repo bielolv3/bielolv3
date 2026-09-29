@@ -2,6 +2,7 @@
 export default {
   id: 'sala01',
   nome: 'Doca do Santuário',
+  subtitulo: 'a ruína lembra quem embarcou',
   chao: [
     '##############',
     '#............#',
@@ -31,5 +32,13 @@ export default {
     '              ',
     '              ',
     '      X       ',
+  ],
+  // dicas: `em` = tile [i, j] que dispara ao chegar perto (raio em tiles); sem `em`, aparece ao entrar
+  dicas: [
+    { texto: 'WASD anda · Q/E gira a câmera' },
+    { texto: 'Espaço pula — degraus altos pedem pulo', em: [9, 3], raio: 2.5 },
+    { texto: 'J golpeia', em: [3, 4], raio: 3 },
+    { texto: '1 Hugo · 2 Chico · 3 Orlando', em: [4, 6], raio: 2 },
+    { texto: 'Fragmentos de memória enchem o Surto (F)', em: [10, 2], raio: 1.8 },
   ],
 };

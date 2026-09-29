@@ -19,6 +19,14 @@ export class Jogador extends Entidade {
     this.pulosRestantes = 0;
     this.olhando = new THREE.Vector3(1, 0, 0);
     this.trocar('hugo', true);
+    this.jogo.habilidades?.prepararJogador(this);   // cria this.recursos (HUD)
+  }
+
+  // Guarda, parry, Massa e Surto filtram o dano (habilidades.js); null = anulado
+  receberDano(qtd, origem, opts) {
+    const h = this.jogo.habilidades;
+    const f = h ? h.filtrarDano(this, qtd, origem, opts) : { qtd, opts };
+    return f ? super.receberDano(f.qtd, origem, f.opts) : false;
   }
 
   get stats() { return MACACOS[this.atual]; }
@@ -84,13 +92,14 @@ export class Jogador extends Entidade {
   }
 
   golpear() {
+    if (this.recursos?.guardando) return;   // Guarda do Hugo não ataca
     const s = this.stats;
     const surto = this.surto.ativo > 0;
     this.recarga.golpe = 0.35;
     const centro = this.pos.clone().addScaledVector(this.olhando, s.alcance * 0.7);
     this.jogo.eventos.emitir('golpe', { autor: this, centro });
     for (const e of this.jogo.entidades) {
-      if (e.time !== 'inimigo' || e.removido) continue;
+      if ((e.time !== 'inimigo' && !e.ehCaixa) || e.removido) continue;
       const d = Math.hypot(e.pos.x - centro.x, e.pos.z - centro.z);
       if (d < s.alcance * 0.7 + e.raio && Math.abs(e.pos.y - this.pos.y) < 1.2) {
         e.receberDano(s.dano * (surto ? 2 : 1), this, { empurra: s.empurra * (surto ? 1.6 : 1) });

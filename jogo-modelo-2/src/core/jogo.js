@@ -102,7 +102,9 @@ export class Jogo {
       const dt = Math.min(0.05, (agora - anterior) / 1000);
       anterior = agora;
       this.passo(dt);
-      this.renderer.render(this.cena, this.camera.cam);
+      // pós-processamento (bloom, vinheta) instalado pela Frente B em src/fx
+      if (this.posProcesso) this.posProcesso.render(dt);
+      else this.renderer.render(this.cena, this.camera.cam);
       requestAnimationFrame(quadro);
     };
     requestAnimationFrame(quadro);

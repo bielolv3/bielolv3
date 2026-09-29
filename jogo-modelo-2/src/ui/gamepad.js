@@ -12,6 +12,8 @@ const BOTOES = {
   14: 'hugo',       // direcional esq
   12: 'chico',      // direcional cima
   15: 'orlando',    // direcional dir
+  13: 'usarReliquia', // direcional baixo
+  8: 'reliquia',    // Select/Back: alterna relíquia
 };
 const ZONA_MORTA = 0.2;
 

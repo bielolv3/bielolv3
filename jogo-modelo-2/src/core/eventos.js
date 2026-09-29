@@ -1,7 +1,8 @@
 // Barramento simples: sistemas (HUD, áudio, partículas) escutam sem acoplar.
 // Eventos: dano, morte, golpe, troca, derrota, vitoria, sala, pausa, coleta, surto,
 // identidade, recurso, porta, selo, parry, alerta, cura, derrapa, quebra, empurrao,
-// investida, teleporte, explosao, chefe
+// investida, teleporte, explosao, chefe, pulo, pouso, passada, progresso,
+// reliquia, reliquiaTroca, reliquiaUsada, reliquiaFalha, reflexo
 export class Eventos {
   constructor() { this.ouvintes = new Map(); }
   on(nome, fn) {

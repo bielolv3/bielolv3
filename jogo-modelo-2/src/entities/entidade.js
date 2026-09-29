@@ -39,6 +39,7 @@ export function animarMaterial(mat) {
     uCorFixa: { value: new THREE.Vector4(0, 0, 0, 0) },
     uPontilhado: { value: 0 },   // 1 = xadrez (silhueta atrás das coisas)
     uLuz: { value: new THREE.Color(1, 1, 1) },   // luz da sala no sprite (Entidade.iluminar)
+    uLuzAdd: { value: new THREE.Color(0, 0, 0) },   // brilho das PointLights somado (lê em sprites escuros)
   };
   mat.userData.anim = u;
   mat.side = THREE.DoubleSide;   // espelhado, o quadrado vira de costas
@@ -47,10 +48,10 @@ export function animarMaterial(mat) {
     sh.vertexShader = 'uniform vec2 uDeform; uniform float uInclina; uniform vec2 uDesloc; uniform float uEspelho;\n'
       + sh.vertexShader.replace('vec2 rotatedPosition;',
         'alignedPosition *= uDeform;\n\talignedPosition.x = alignedPosition.x * uEspelho + alignedPosition.y * uInclina;\n\talignedPosition += uDesloc;\n\tvec2 rotatedPosition;');
-    sh.fragmentShader = 'uniform float uBranco; uniform vec4 uCorFixa; uniform float uPontilhado; uniform vec3 uLuz;\n'
+    sh.fragmentShader = 'uniform float uBranco; uniform vec4 uCorFixa; uniform float uPontilhado; uniform vec3 uLuz; uniform vec3 uLuzAdd;\n'
       + sh.fragmentShader.replace('#include <tonemapping_fragment>',
         'if (uPontilhado > 0.5 && mod(floor(gl_FragCoord.x * 0.5) + floor(gl_FragCoord.y * 0.5), 2.0) < 1.0) discard;\n\t' +
-        'gl_FragColor.rgb *= uLuz;\n\t' +
+        'gl_FragColor.rgb = gl_FragColor.rgb * uLuz + uLuzAdd * (0.35 + gl_FragColor.rgb);\n\t' +
         'gl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(1.0, 0.97, 0.9), uBranco);\n\tgl_FragColor.rgb = mix(gl_FragColor.rgb, uCorFixa.rgb, uCorFixa.a);\n\t#include <tonemapping_fragment>');
   };
   mat.customProgramCacheKey = () => 'spriteAnimado';
@@ -67,6 +68,8 @@ const FORCA_PONTUAL = 0.34;     // PointLights (braseiros, cristais, cogumelos) 
 const SOMBRA_PAREDE = 0.82;     // sombra de parede = ambiente do bioma × isto
 const LUZ_MIN_JOGADOR = 0.62;   // luminância mínima do jogador
 const LUZ_MAX = 1.45;           // teto do uLuz (sem estourar)
+const PONTUAL_SOMA = 0.14;      // fração das PointLights que também soma (uLuzAdd)
+const SOMA_MAX = 0.16;
 const amortecer = (atual, alvo, taxa, dt) => atual + (alvo - atual) * (1 - Math.exp(-taxa * dt));
 
 // Base de tudo que se move/interage. Contrato usado pelo jogo:
@@ -184,13 +187,14 @@ export class Entidade {
     // sombra de parede: um pouco abaixo do ambiente do bioma (mais legível que só o tom)
     _sombraCor.copy(L.ambiente).multiplyScalar(SOMBRA_PAREDE);
     const c = u.uLuz.value.copy(L.sol).lerp(_sombraCor, this._sombraSol);
-    const cy = this.pos.y + 0.6;
+    const cy = this.pos.y + 0.6, add = u.uLuzAdd.value.setRGB(0, 0, 0);
     for (const { luz, p } of L.pontos) {
       if (!luz.visible || luz.intensity <= 0 || !luz.distance) continue;
       const d = Math.max(0.55, Math.hypot(p.x - this.pos.x, p.y - cy, p.z - this.pos.z));
       if (d >= luz.distance) continue;
       const k = (1 - (d / luz.distance) ** 4) ** 2 / d ** luz.decay * luz.intensity * FORCA_PONTUAL;
       c.r += luz.color.r * k; c.g += luz.color.g * k; c.b += luz.color.b * k;
+      add.r += luz.color.r * k; add.g += luz.color.g * k; add.b += luz.color.b * k;
     }
     if (this.surto?.ativo > 0) c.lerp(BRANCO, 0.5);   // Surto brilha por conta própria
     // jogador nunca afunda demais (leitura em sala escura)
@@ -198,6 +202,10 @@ export class Entidade {
       const lum = c.r * 0.3 + c.g * 0.55 + c.b * 0.15;
       if (lum < LUZ_MIN_JOGADOR) c.multiplyScalar(LUZ_MIN_JOGADOR / Math.max(lum, 0.05));
     }
+    // parte somada: pequena e com teto (não lava o sprite)
+    add.multiplyScalar(PONTUAL_SOMA);
+    const ma = Math.max(add.r, add.g, add.b);
+    if (ma > SOMA_MAX) add.multiplyScalar(SOMA_MAX / ma);
     // teto suave: comprime acima de 1 e corta em LUZ_MAX, mantendo o tom
     const m = Math.max(c.r, c.g, c.b);
     if (m > 1) c.multiplyScalar(Math.min(LUZ_MAX, 1 + (m - 1) / (1 + (m - 1) * 1.2)) / m);

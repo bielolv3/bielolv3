@@ -6,7 +6,7 @@
 ## O que é
 É um jogo de ação e exploração que roda no navegador, ambientado no mundo do **Códice de Primordia** (Hills Co, cânone v2).
 - **Visual:** estilo **HD-2D**. O mundo é feito de blocos 3D em grade com altura (tilemap) e visto por uma **câmera ortográfica isométrica** que gira de 90 em 90 graus (Q/E).
-- **Personagens:** sprites em pixel art em pé no cenário, com 32 px por tile, na mesma escala dos blocos.
+- **Personagens:** sprites em pixel art em pé no cenário, com 32 px por tile, na mesma escala dos blocos. Os macacos têm vista de frente, de costas e de perfil, e recebem a luz de cada sala.
 - **Tecnologia:** Three.js + Vite. Toda a arte de blocos, inimigos e macacos é gerada por código.
 
 ## Conteúdo
@@ -38,7 +38,6 @@
 - `referencias/folha-macacos.png`: todos os quadros de animação dos macacos.
 
 ## Pendências e ideias para o próximo passo
-- Vista lateral verdadeira dos macacos; hoje eles aparecem de frente ou de costas, com espelhamento.
 - Colossos restantes do Códice como atos futuros: Errante, Mênisco, Latente, Devorador, Coroado, Fundo, Serpente, Céu, Adormecido e Carcereiro.
 - Faltam 8 das 12 relíquias previstas.
 - Fauna opcional ainda não feita: lagarto-espião, arara-de-fogo, macaco selvagem e serpente-escama.

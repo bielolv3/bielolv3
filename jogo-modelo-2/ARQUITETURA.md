@@ -92,9 +92,11 @@ direção relativa à câmera, luz pelo lado do sol na tela). Com `this.quadros 
 deformação procedural de `Entidade.animarSprite` só tempera (squash leve, sem bob).
 Inimigos e fauna também têm quadros (`ANIMADOS` / `animarInimigo` em `fx/sprites.js`): Guardião,
 Acólito, Sentinela, Bruto, Drone, Torre, Andador, Javali, Sapo, Aranha e Planta (andar/parado,
-preparo, golpe logo após o preparo, investida, ar).
+preparo, golpe logo após o preparo, investida, ar), além do Drone Construtor (hélice + feixe ao
+reerguer selo) e da Matriarca (calma, despertar, ira, pisão, chicote, esporos). Um inimigo pode
+escolher o próprio quadro com `quadroAnimado(t)` → `[animação, i]` (a Matriarca usa isso).
 Luz nos sprites: `Entidade.iluminar` (chamado em `sincronizar`) multiplica o sprite pelo uniform
-`uLuz` = sol ou sombra do bioma (`jogo.luzSprites`, montado em `world/ambiente.js`; sombra = parede
+`uLuz` (e `uLuzAdd`, luz somada dos braseiros para sprites escuros) = sol ou sombra do bioma (`jogo.luzSprites`, montado em `world/ambiente.js`; sombra = parede
 alta entre a entidade e o sol, 3 amostras no tilemap) + PointLights da sala com a mesma queda.
 Vem antes do flash branco e da cor fixa (silhueta); `semLuz = true` desliga (vaga-lume).
 Conferência: `node scripts/exportar-macacos.mjs` gera `referencias/folha-macacos.png` e os

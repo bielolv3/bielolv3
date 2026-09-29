@@ -174,7 +174,7 @@ export class Habilidades {
       else if (e.ehCaixa && d < 1.6) e.quebrar();
     }
     jogo.camera.tremer(0.6);
-    j.recarga.identidade = 1.2;
+    j.recarga.identidade = 2;
     jogo.eventos.emitir('identidade', { macaco: 'hugo', tipo: 'pulverizar', centro: j.pos.clone() });
   }
 

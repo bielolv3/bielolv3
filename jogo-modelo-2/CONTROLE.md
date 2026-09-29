@@ -34,3 +34,4 @@ Para republicar: `npm run build && node scripts/pagina-artifact.mjs` e publicar 
 | 29/09 | 0 | US$ 0,96 | Leitura do Códice, escolha do estilo |
 | 29/09 | 1 | ~US$ 2 | Esqueleto rodando: sala 1, Hugo andando/pulando, Guardião |
 | 29/09 | 2 | US$ 17,45 | Frentes A, B, C integradas; 7 salas; publicado: https://claude.ai/artifact/A3hwdNjWcVuUuV6YmT9L3P |
+| 29/09 | 3 | US$ 27,71 | Revisão (10 bugs), playtest com bot (8 salas ok), sala 8 nova, chefe rebalanceado; republicado v2 |

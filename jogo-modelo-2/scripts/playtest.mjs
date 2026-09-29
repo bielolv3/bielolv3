@@ -44,8 +44,32 @@ export const ROTAS = {
   ],
   6: [
     { ir: [3, 12] }, { k: 1 }, { ir: [3, 10] }, { ir: [3, 6] }, { ir: [4, 3] }, { m: 'orlando' },
-    { ir: [10, 3], pular: true }, { lutar: 9, area: [9, 1, 15, 10] }, { ir: [13, 7] }, { k: 1, mira: [13, 8] },
+    { ir: [10, 3], pular: true }, { lutar: 9, area: [9, 1, 15, 10] }, { ir: [12, 3] }, { ir: [13, 7] }, { k: 1, mira: [13, 8] },
     { ir: [15, 5] }, { ir: [17, 5] }, { lutar: 9, area: [17, 1, 20, 12] }, { m: 'chico' }, { ir: [18, 12] }, { ir: [18, 14] }, { ir: [18, 16] },
+  ],
+  7: [
+    { m: 'chico' }, { ir: [4, 15] }, { ir: [3, 8] }, { ir: [3, 7] }, { ir: [3, 6] }, { ir: [5, 15] }, { ir: [20, 15] }, { ir: [20, 13] },
+    { m: 'hugo' }, { chefe: 1 }, { so: 'paz', matarChefe: 1 }, { ir: [11, 5] }, { ir: [11, 2] },
+  ],
+  // só o Hugo, direto no chefe
+  '7-hugo': [{ chefe: 1 }, { so: 'paz', matarChefe: 1 }, { ir: [11, 5] }, { ir: [11, 2] }],
+  // só o Chico (sem quebrar selos)
+  '7-chico': [{ m: 'chico' }, { chefe: 1 }, { so: 'paz', matarChefe: 1 }, { ir: [11, 5] }, { ir: [11, 2] }],
+  // sala08 (Comporta dos Três) fica antes da arena na ordem do jogo; a chave é o id
+  8: [
+    { m: 'chico' }, { ir: [3, 9] }, { lutar: 5, area: [1, 8, 16, 12] }, { ir: [3, 8] }, { ir: [3, 6] }, { ir: [4, 3] }, { m: 'orlando' },
+    { ir: [9, 3], pular: true }, { l: 1 }, { ir: [14, 3], pular: true }, { lutar: 4, area: [14, 1, 16, 6] },
+    { m: 'hugo' }, { ir: [15, 3] }, { k: 1 }, { ir: [17, 3] }, { ir: [19, 4] }, { ir: [19, 2] },
+  ],
+  // volta pelo selo quando pula a alavanca
+  '8-volta': [
+    { ir: [13, 9] }, { ir: [14, 8] }, { k: 1 }, { ir: [14, 6] }, { lutar: 4, area: [14, 1, 16, 6] }, { ir: [14, 5] }, { k: 1, mira: [14, 8], so: 'x' },
+    { ir: [14, 8] }, { ir: [3, 9] }, { m: 'chico' }, { ir: [3, 8] }, { ir: [3, 6] }, { ir: [4, 3] }, { m: 'orlando' },
+    { ir: [9, 3], pular: true }, { l: 1 }, { ir: [14, 3], pular: true }, { m: 'hugo' }, { ir: [15, 3] }, { k: 1 }, { ir: [17, 3] }, { ir: [19, 2] },
+  ],
+  // sem puxar a alavanca não se sai (a porta segura)
+  '8-neg-semalavanca': [
+    { ir: [13, 9] }, { ir: [14, 8] }, { k: 1 }, { ir: [14, 6] }, { ir: [15, 3] }, { k: 1 }, { ir: [17, 3], limite: 5 }, { ir: [19, 2], limite: 5 },
   ],
   // variante: limpa o pátio inteiro (Bruto incluso) antes de sair
   '5-tudo': [
@@ -54,7 +78,7 @@ export const ROTAS = {
     { m: 'orlando' }, { ir: [14, 3] }, { k: 1, mira: [14, 1] }, { ir: [17, 4] }, { ir: [19, 2] },
   ],
   // teste negativo: o Chico não deveria passar por cima do selo
-  '4-chico': [{ m: 'chico' }, { ir: [3, 4] }, { ir: [3, 8] }],
+  '4-neg-chico': [{ m: 'chico' }, { ir: [3, 4] }, { ir: [3, 8] }],
 };
 
 // ---------------------------------------------------------------- bot (roda na página)
@@ -79,7 +103,20 @@ function instalarBot() {
     return { x: wx * rx + wz * rz, y: wx * fx + wz * fz };
   }
 
-  async function rodar(indice, rota, modo) {
+  // índice no jogo da sala com esse id (a ordem de levels/index.js pode mudar)
+  const indices = {};
+  function indiceDe(id) {
+    if (indices[id] !== undefined) return indices[id];
+    for (let k = 0; k < 30; k++) {
+      try { jogo.jogador = null; jogo.carregarSala(k); } catch { break; }
+      indices[jogo.mapa.sala.id] = k;
+      if (jogo.mapa.sala.id === id) return k;
+    }
+    throw new Error('sala não encontrada: ' + id);
+  }
+
+  async function rodar(id, rota, modo) {
+    const indice = indiceDe(id);
     jogo.jogador = null;
     jogo.habilidades.recursos.bananas = jogo.habilidades.recursos.bananasMax;
     jogo.carregarSala(indice);
@@ -158,8 +195,9 @@ function instalarBot() {
 
     // ---- locomoção: anda até alvo; pula o que precisar
     function andar(j, alvo, opts = {}) {
+      if (Number.isNaN(alvo.x + alvo.z)) throw new Error('alvo NaN ' + new Error().stack.split('\n').slice(2, 4).join(' <- ') + ' estado=' + inimigos().map((e) => e.estado + JSON.stringify(e.pos)).join(','));
       const dx = alvo.x - j.pos.x, dz = alvo.z - j.pos.z, d = Math.hypot(dx, dz);
-      if (d < (opts.tol ?? 0.2)) { eixo = { x: 0, y: 0 }; return true; }
+      if (d < Math.max(0.02, opts.tol ?? 0.2)) { eixo = { x: 0, y: 0 }; return true; }
       const ux = dx / d, uz = dz / d;
       const mag = d < 0.5 ? Math.max(0.35, d / 0.5) : 1;
       eixo = eixoPara(ux * mag, uz * mag);
@@ -262,6 +300,9 @@ function instalarBot() {
 
     // ---- executa a rota
     const LIMITE = 40;
+    // atraso aleatório no início: repetições não saem idênticas
+    for (let k = Math.random() * 60; k > 0; k--) passo();
+    try {
     for (let n = 0; n < rota.length && !saiu; n++) {
       const a = rota[n];
       if (a.so && a.so !== modo) continue;
@@ -308,6 +349,7 @@ function instalarBot() {
         break;
       }
     }
+    } catch (erro) { R.log.push('ERRO: ' + erro.message); }
     segurar.clear(); eixo = { x: 0, y: 0 };
     offs.forEach((f) => f());
     R.ok = saiu;
@@ -353,9 +395,10 @@ for (const s of salas) {
   if (!ROTAS[s]) { console.log(`sala ${s}: sem rota`); continue; }
   for (const modo of modos) {
     for (let r = 0; r < repeticoes; r++) {
-      const R = await pag.evaluate(({ s, rota, modo }) => window.__bot.rodar(parseInt(s) - 1, rota, modo), { s, rota: ROTAS[s], modo });
-      if (!R.ok) falhas++;
-      console.log(`${R.ok ? 'OK  ' : 'FALHA'} sala${String(s).padStart(2, '0').padEnd(8)} ${modo.padEnd(4)} t=${String(R.tempo).padStart(5)}s dano=${R.dano} quedas=${R.quedas} mortes=${R.mortes} vida=${R.vidaFinal} mem=${R.memorias} inimigos ${R.inimigosVivos}/${R.inimigosTotal} fim=${R.fim}`);
+      const R = await pag.evaluate(({ s, rota, modo }) => window.__bot.rodar('sala' + String(parseInt(s)).padStart(2, '0'), rota, modo), { s, rota: ROTAS[s], modo });
+      const negativo = s.includes('-neg');   // rota que NÃO deveria chegar à saída
+      if (R.ok === negativo) falhas++;
+      console.log(`${R.ok === negativo ? (negativo ? 'ATALHO' : 'FALHA') : (negativo ? 'OK(bloq)' : 'OK  ')} sala${String(s).padStart(2, '0').padEnd(8)} ${modo.padEnd(4)} t=${String(R.tempo).padStart(5)}s dano=${R.dano} quedas=${R.quedas} mortes=${R.mortes} vida=${R.vidaFinal} mem=${R.memorias} inimigos ${R.inimigosVivos}/${R.inimigosTotal} fim=${R.fim}`);
       if (R.dano) console.log('      dano por fonte: ' + JSON.stringify(R.fontes));
       for (const l of R.log) console.log('      ' + l);
       if (r === 0 && modo === modos[0]) console.log('      dicas: ' + R.dicas.join(' | '));

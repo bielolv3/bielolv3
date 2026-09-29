@@ -470,7 +470,7 @@ export class DroneConstrutor extends Voador {
 // onda; entre ataques procura cobertura atrás de selos intactos.
 export class Andador extends Inimigo {
   constructor(jogo, x, z) {
-    super(jogo, x, z, { vida: 20, raio: 0.9, faccao: 'quanta', altura: 2.5, dano: 2 });
+    super(jogo, x, z, { vida: 36, raio: 0.9, faccao: 'quanta', altura: 2.5, dano: 2 });
     this.pesado = true;
     this.resisteAtordoar = true;
     this.agarravel = false;
@@ -548,7 +548,7 @@ export class Andador extends Inimigo {
         return { x: 0, z: 0 };
       case 'rajada':
         if (this.tEstado <= 0) {
-          for (const a of [-0.35, 0, 0.35]) this.atirar(alvo, { velocidade: 7, cor: 0x7ff3ff, vidaUtil: 2.5, tamanho: 0.16 }, a);
+          for (const a of [-0.35, 0, 0.35]) this.atirar(alvo, { velocidade: 7, cor: 0x7ff3ff, vidaUtil: 2.5, tamanho: 0.16, dano: 1 }, a);
           this.tEstado = 0.45;
           if (--this.rajadas <= 0) this.fimAtaque();
         }
@@ -571,5 +571,6 @@ export class Andador extends Inimigo {
     this.mudar('reposicionar', this.vida < this.vidaMax / 2 ? 1.2 : 2);
   }
 
-  atordoar(t) { super.atordoar(t); if (this.estado !== 'reposicionar') this.fimAtaque(); }
+  // só interrompe durante o preparo: o Pulverizar não trava o chefe em sequência
+  atordoar(t) { super.atordoar(t); if (this.estado.endsWith('Prep')) this.fimAtaque(); }
 }

@@ -661,6 +661,7 @@ export class Matriarca extends Fauna {
   atualizar(dt) {
     // a raiva dela passa com o tempo, perto ou longe (a clareira é dela)
     this.flashAviso = Math.max(0, this.flashAviso - dt);
+    this.tGolpe = Math.max(0, (this.tGolpe ?? 0) - dt);
     if (this.provocado > 0 && this.estado === 'pausa') this.provocado = Math.max(0, this.provocado - dt);
     Inimigo.prototype.atualizar.call(this, dt);
     for (const l of this.linhas) l.atualizar(dt);
@@ -730,7 +731,23 @@ export class Matriarca extends Fauna {
     } else this.mudar('esporosPrep', 0.9);
   }
 
-  fimAtaque() { this.preparo = 0; this.telegrafar(false); this.mudar('pausa', this.vida < this.vidaMax / 2 ? 1.0 : 1.6); }
+  // quadro da animação (fx/sprites.js, ANIMADOS.matriarca) pelo estado da IA
+  quadroAnimado(t) {
+    if (this.tGolpe > 0) return [this.ultimoGolpe, 0];
+    switch (this.estado) {
+      case 'despertar': return ['despertar', this.tEstado > 0.5 ? 0 : 1];
+      case 'pisaoPrep': return ['pisaoPrep', this.tEstado > 0.6 ? 0 : 1];
+      case 'chicotePrep': return ['chicotePrep', Math.floor(t * 6)];
+      case 'esporosPrep': return ['esporosPrep', Math.floor(t * 5)];
+      case 'pausa': if (this.irritado) return ['ira', Math.floor(t * 2.5)];
+    }
+    return ['calma', Math.floor(t * 1.6)];
+  }
+
+  fimAtaque() {
+    this.ultimoGolpe = this.estado.replace('Prep', ''); this.tGolpe = 0.5;
+    this.preparo = 0; this.telegrafar(false); this.mudar('pausa', this.vida < this.vidaMax / 2 ? 1.0 : 1.6);
+  }
 
   // não é derrubada no meio de um golpe; só interrompe o preparo
   atordoar(t) { super.atordoar(t * 0.3); }

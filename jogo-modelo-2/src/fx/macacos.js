@@ -7,8 +7,9 @@ import { faixasHumanoides } from './sprites.js';
 // tronco, braços, pernas, mãos, pés) posicionadas por um esqueleto simples
 // (pose = deslocamentos + alvos das mãos e pés, com IK de dois ossos).
 //
-// Vistas: 'f' (3/4 de frente, virado para a direita da tela) e 'c' (3/4 de costas,
-// virado para a direita). Esquerda = espelho no shader (animarMaterial).
+// Vistas: 'f' (3/4 de frente, virado para a direita da tela), 'c' (3/4 de costas,
+// virado para a direita) e 'p' (perfil, virado para a direita). Esquerda = espelho no
+// shader (animarMaterial).
 // Luz: cada vista é desenhada com luz vindo da esquerda e da direita; o jogador
 // escolhe a variante que, depois do espelho, bate com o lado do sol na tela.
 //
@@ -354,32 +355,155 @@ function rostoGorila(t, fx, hy, ex, focinho, pelo, brasa = false) {
   } else t.linha(fx - 2, hy + 4, fx + 1, hy + 4, focinho[0]);
 }
 
+// ---------------------------------------------------------------- perfil (vista 'p', virado para a direita)
+function troncoPerfil(t, d, c) {
+  const { tx, ty, pose } = c, T = d.tronco;
+  const ry = T.ry + (pose.estica ?? 0), rx = Math.round(T.rx * 0.72);
+  const id = t.el(tx, ty, rx, ry, T.rampa, { p: T.p });
+  const fr = tx + rx, tr = tx - rx;   // borda da frente / das costas
+  if (c.nome === 'hugo' && c.forma === 'normal') {
+    const M = PAL.moletom;
+    t.el(fr - 1.5, ty + 2, 2, ry - 6, PAL.peito, { nova: false, ajuste: -0.8 });      // peito na abertura do zíper
+    t.linha(fr - 4, ty - ry + 4, fr - 4, ty + ry - 3, M[0]);
+    t.linha(fr - 3, ty - ry + 3, fr - 3, ty - ry + 7, OSSO);                           // cordão do capuz
+    t.el(tr + 3, ty - ry + 4, 4, 4.5, M, { nova: false, ajuste: 0.4 });                // capuz caído nas costas
+    t.linha(tr + 3, ty - ry + 8, tr + 6, ty - ry + 9, M[0]);
+    for (let x = Math.round(tr + 2); x <= fr - 2; x++) t.set(x, ty + ry - 2, x % 2 ? M[1] : M[0]);   // barra canelada
+    t.linha(tx - 1, ty + 4, fr - 5, ty + 5, M[0]);                                      // bolso
+  } else if (c.nome === 'hugo') {
+    t.el(fr - 3, ty - 3, 3.5, 5, PAL.peito, { nova: false });                          // peitoral
+    t.el(fr - 3, ty + 5, 3.5, 4.5, PAL.peito, { nova: false, ajuste: -0.4 });
+    for (let k = 0; k < 4; k++) t.linha(tr + 2 + k * 2, ty - 9 + k, tr + 3 + k * 2, ty + 3 - (k % 2), PAL.prata[1 + (k % 2)]);   // lombo prateado
+  } else if (c.nome === 'chico') {
+    t.el(fr - 2, ty + 0.5, 2.5, 5, PAL.chicoPeito, { nova: false });
+    if (d.juba) for (let k = 0; k < 5; k++) { const x = tr + 2 + k * 3; t.tri(x - 1.5, ty - ry + 3, x + 1.5, ty - ry + 3, x - 3, ty - ry - 1 - (k % 2 ? 0 : 2), PAL.pretoH[k % 2 ? 1 : 2]); }
+  } else if (c.nome === 'orlando') {
+    const L = PAL.laranja;
+    for (let x = Math.round(tr + 2); x < fr - 1; x += 3) t.linha(x, ty + 2 + (x % 2), x - 1, ty + ry - 2, L[1]);   // mechas
+    t.linha(fr - 3, ty - ry + 3, fr - 1, ty, L[1]);
+    if (d.exo) { t.el(fr - 2.5, ty - 3, 3, 4, PAL.mostarda, { nova: false }); t.set(fr - 2, ty - 3, PAL.quanta[3]); t.linha(tr + 1, ty - 5, fr - 4, ty - 5, PAL.mostarda[1]); }
+  }
+  return id;
+}
+
+// rosto de gorila de lado: sobrancelha, um olho, focinho saltado para a frente
+function rostoGorilaLado(t, fx, hy, ex, focinho, pelo, brasa = false) {
+  t.linha(fx, hy - 3, fx + 4, hy - 3, pelo[4]);
+  if (ex === 'bravo') t.set(fx + 3, hy - 4, pelo[4]);
+  const olho = brasa ? PAL.brasa[2] : OSSO;
+  if (ex === 'dor') t.linha(fx + 1, hy - 1, fx + 3, hy - 1, pelo[0]);
+  else { t.set(fx + 2, hy - 1, olho); t.set(fx + 3, hy - 1, olho); t.set(fx + 3, hy - 2, TINTA); t.set(fx + 1, hy - 1, TINTA); if (brasa) t.set(fx + 2, hy - 2, PAL.brasa[1]); }
+  t.el(fx + 4, hy + 3.5, 3.6, 2.7, focinho, { nova: false, ajuste: -0.3 });
+  t.set(fx + 6, hy + 2, TINTA);                                                           // narina
+  if (ex === 'grito' || ex === 'bravo') {
+    t.el(fx + 4.5, hy + 4.2, 2.2, 1.5, [BOCA, BOCA, PAL.lingua[0]], { nova: false });
+    t.set(fx + 5, hy + 3, OSSO); t.set(fx + 3, hy + 3, OSSO);
+  } else t.linha(fx + 3, hy + 4, fx + 6, hy + 4, focinho[0]);
+}
+
+function cabecaPerfil(t, d, c) {
+  const { hx, hy, pose } = c, ex = pose.expr;
+  let id;
+  if (c.nome === 'hugo' && c.forma === 'normal') {
+    const M = PAL.moletom;
+    t.el(hx - 2, hy - 1, 9.5, 9, M, { p: 2.2 });                                          // capuz (aberto na frente)
+    t.linha(hx - 6, hy - 7, hx - 9, hy + 2, M[1]);
+    id = t.el(hx + 3, hy + 0.5, 6.5, 7, PAL.pretoH, { ajuste: -1.2 });                // rosto bem mais escuro que o capuz
+    t.vinco(id, M[4]);                                                                     // borda do capuz em volta do rosto
+    rostoGorilaLado(t, hx + 3.5, hy, ex, PAL.peito, PAL.pretoH);
+  } else if (c.nome === 'hugo') {
+    id = t.el(hx + 1.5, hy, 6.5, 6.5, PAL.pretoH, { p: 2.2 });
+    t.el(hx - 1, hy - 5, 4.5, 3, PAL.pretoH, { nova: false, ajuste: 0.5 });              // crista sagital
+    t.linha(hx - 4, hy - 4, hx - 1, hy - 6, PAL.prata[2]);
+    rostoGorilaLado(t, hx + 3, hy, ex ?? 'bravo', PAL.orlPele, PAL.pretoH, true);
+  } else if (c.nome === 'chico') {
+    const P = PAL.chicoPele;
+    if (d.juba) for (let k = 0; k < 9; k++) {   // juba espetada para trás
+      const a = Math.PI * 0.45 + k * Math.PI * 0.16, r = 11.5 + (k % 3) * 2;
+      t.tri(hx + Math.cos(a - 0.3) * 6, hy - Math.sin(a - 0.3) * 6, hx + Math.cos(a + 0.3) * 6, hy - Math.sin(a + 0.3) * 6, hx + Math.cos(a) * r, hy - Math.sin(a) * r, PAL.pretoH[1 + (k % 3)]);
+    }
+    id = t.el(hx, hy - 0.5, 7.5, 7.5, PAL.pretoH);
+    t.el(hx + 4.5, hy + 2, 3.8, 4.5, P, { nova: false });                                 // cara
+    // óculos de persiana de lado: uma lente na frente, haste até a orelha
+    const gy = hy - 2;
+    t.linha(hx - 2, gy + 1, hx + 4, gy, OSSO);
+    t.linha(hx + 4, gy, hx + 8, gy, OSSO);
+    for (let x = hx + 5; x <= hx + 7; x++) t.set(x, gy + 1, x === hx + 6 ? '#4a4f58' : TINTA);
+    t.set(hx + 8, gy + 1, OSSO); t.set(hx + 5, gy + 2, OSSO); t.set(hx + 6, gy + 2, TINTA); t.set(hx + 7, gy + 2, OSSO);
+    if (d.juba) t.set(hx + 6, gy + 1, PAL.brasa[2]);
+    const by = hy + 4;
+    if (ex === 'dor') t.linha(hx + 5, by, hx + 8, by, BOCA);
+    else {
+      t.linha(hx + 5, by, hx + 8, by, BOCA); t.set(hx + 8, by - 1, BOCA);
+      const lg = (d.juba ? 4 : 2) + (ex === 'grito' ? 1 : 0);
+      for (let k = 0; k < lg; k++) { t.set(hx + 8 + (k > 1 ? 1 : 0), by + 1 + k, PAL.lingua[2]); t.set(hx + 7 + (k > 1 ? 1 : 0), by + 1 + k, PAL.lingua[1]); }
+    }
+    const ore = t.el(hx - 2, hy + 1, 2.2, 2.8, P, { ajuste: -0.3 });                      // orelha
+    t.vinco(ore, P[0]);
+  } else if (c.nome === 'orlando') {
+    const L = PAL.laranja, P = PAL.orlPele;
+    id = t.el(hx - 1.5, hy - 1, 7.5, 7.5, L);                                             // cabelo / nuca
+    for (let k = 0; k < 3; k++) t.linha(hx - 6 + k * 2, hy - 4, hx - 7 + k * 2, hy + 4, L[2]);
+    t.el(hx + 1, hy + 1, 2.6, 8, PAL.pretoH, { p: 2.4 });                                 // bochecha (flange) de quina
+    const idc = t.el(hx + 4, hy + 1.5, 4.2, 6.2, P);                                      // cara
+    t.vinco(idc, P[0]);
+    const ox = hx + 5;                                                                     // óculos redondos
+    t.set(ox, hy - 2, OSSO); t.set(ox + 1, hy - 2, OSSO); t.set(ox - 1, hy - 1, OSSO); t.set(ox + 2, hy - 1, OSSO);
+    t.set(ox - 1, hy, OSSO); t.set(ox + 2, hy, OSSO); t.set(ox, hy + 1, OSSO); t.set(ox + 1, hy + 1, OSSO);
+    const vidro = ex === 'dor' ? TINTA : '#1c282e';
+    t.set(ox, hy - 1, ex === 'dor' ? TINTA : '#cfe6e4'); t.set(ox + 1, hy - 1, vidro); t.set(ox, hy, vidro); t.set(ox + 1, hy, vidro);
+    t.linha(ox - 2, hy - 1, hx - 1, hy, OSSO);                                             // haste
+    if (d.exo || ex === 'bravo') t.linha(ox - 1, hy - 4, ox + 2, hy - 3, TINTA);
+    const by = hy + 4, larga = d.exo || ex === 'grito';
+    if (ex === 'dor') t.linha(hx + 5, by, hx + 7, by, BOCA);
+    else {
+      t.el(hx + 6, by + (larga ? 0.5 : 0), larga ? 2.2 : 1.8, larga ? 2.2 : 1.4, [BOCA, BOCA, PAL.lingua[0]], { nova: false });
+      t.linha(hx + 5, by - 1, hx + 7, by - 1, OSSO);
+      if (larga) t.linha(hx + 5, by + 2, hx + 7, by + 2, OSSO);
+    }
+  }
+  return id;
+}
+
 // ---------------------------------------------------------------- montagem de um quadro
 function desenharQuadro(t, nome, forma, pose, vista, ox, oy) {
   const d = CORPOS[nome][forma];
-  const ns = vista === 'f' ? -1 : 1;       // lado da tela do braço/perna mais perto da câmera
-  const vs = vista === 'f' ? 1 : -1;       // passo à frente: desce na tela (frente) ou sobe (costas)
+  const perfil = vista === 'p';            // perfil: virado para a direita, membro perto à esquerda da pilha
+  const ns = vista === 'c' ? 1 : -1;       // lado da tela do braço/perna mais perto da câmera
+  const vs = vista === 'f' ? 1 : vista === 'c' ? -1 : 0;   // passo à frente: desce (frente), sobe (costas), nada (perfil)
   const cx = ox + ANCORA_X, chao = oy + CHAO;
   const bx = pose.bx ?? 0, by = pose.by ?? 0;
   const B = d.braco, Pn = d.perna;
 
   const quadY = chao - d.quadril.y + by;
-  const qN = [cx + ns * d.quadril.x + Math.round(bx / 2), quadY], qF = [cx - ns * d.quadril.x + Math.round(bx / 2), quadY - 1];
   const pes = pose.pes ?? [[0, 0, 0], [0, 0, 0]];
-  const peN = [cx + ns * d.pe.x + pes[0][0], chao + pes[0][1] * vs - pes[0][2]];
-  const peF = [cx - ns * (d.pe.x - 1) + pes[1][0], chao - 1 + pes[1][1] * vs - pes[1][2]];
-
+  let qN, qF, peN, peF, oN, oF;
   const oyv = chao - d.ombro.y + by;
-  const oN = [cx + ns * d.ombro.x + bx, oyv], oF = [cx - ns * (d.ombro.x - 1) + bx, oyv - 1];
+  if (perfil) {
+    // de lado: quadris e ombros empilhados; a passada abre em x (mais larga que na 3/4)
+    const k = 2, qx = cx + Math.round(bx / 2);
+    qN = [qx - 1, quadY]; qF = [qx + 1, quadY - 1];
+    peN = [cx - 1 + pes[0][0] * k, chao - pes[0][2]];
+    peF = [cx + 1 + pes[1][0] * k, chao - 1 - pes[1][2]];
+    oN = [cx + bx - 1, oyv]; oF = [cx + bx + 2, oyv - 1];
+  } else {
+    qN = [cx + ns * d.quadril.x + Math.round(bx / 2), quadY]; qF = [cx - ns * d.quadril.x + Math.round(bx / 2), quadY - 1];
+    peN = [cx + ns * d.pe.x + pes[0][0], chao + pes[0][1] * vs - pes[0][2]];
+    peF = [cx - ns * (d.pe.x - 1) + pes[1][0], chao - 1 + pes[1][1] * vs - pes[1][2]];
+    oN = [cx + ns * d.ombro.x + bx, oyv]; oF = [cx - ns * (d.ombro.x - 1) + bx, oyv - 1];
+  }
   const R = 2 * B.L;
   let mN, mF;
   // pose.lider: maos[0] é o braço do lado para onde olha (o de trás na vista de frente)
   const troca = pose.lider && vista === 'f';
-  if (pose.bolso && d.bolso) { mN = [cx + ns * 9 + bx, chao - d.tronco.y + 5 + by]; mF = [cx - ns * 8 + bx, chao - d.tronco.y + 4 + by]; }
-  else {
+  if (pose.bolso && d.bolso) {
+    if (perfil) { mN = [cx + 5 + bx, chao - d.tronco.y + 5 + by]; mF = [cx + 6 + bx, chao - d.tronco.y + 4 + by]; }
+    else { mN = [cx + ns * 9 + bx, chao - d.tronco.y + 5 + by]; mF = [cx - ns * 8 + bx, chao - d.tronco.y + 4 + by]; }
+  } else {
     const m0 = pose.maos ?? [[1, R * 0.88], [1, R * 0.88]];
     const m = troca ? [m0[1], m0[0]] : m0;
-    const lado = (v, s) => (typeof v === 'object' ? v.fora * s : v);   // {fora: n} = para fora do corpo
+    // {fora: n} = para fora do corpo; de perfil "para fora" é profundidade: vira pouco x (perto à frente, longe atrás)
+    const lado = (v, s) => (typeof v === 'object' ? (perfil ? -v.fora * s * 0.35 : v.fora * s) : v);
     mN = [oN[0] + lado(m[0][0], ns), oN[1] + m[0][1]];
     mF = [oF[0] + lado(m[1][0], -ns), oF[1] + m[1][1]];
   }
@@ -387,7 +511,7 @@ function desenharQuadro(t, nome, forma, pose, vista, ox, oy) {
   const c = {
     nome, forma, vista, ns, pose,
     tx: cx + bx + 1, ty: chao - d.tronco.y + by,
-    hx: cx + bx + 1 + (pose.hx ?? 0) + (d.pesado ? 1 : 0), hy: chao - d.cabeca.y + by + (pose.hy ?? 0),
+    hx: cx + bx + 1 + (pose.hx ?? 0) + (d.pesado ? 1 : 0) + (perfil ? 2 : 0), hy: chao - d.cabeca.y + by + (pose.hy ?? 0),
   };
 
   // membros do lado de longe ficam mais escuros (menos se o sol vem do lado deles)
@@ -433,7 +557,7 @@ function desenharQuadro(t, nome, forma, pose, vista, ox, oy) {
   const idPn = perna(qN, peN, true);
   t.vinco(idPn, Pn.rampa[0]);
   // 3) tronco
-  const idT = tronco(t, d, c);
+  const idT = perfil ? troncoPerfil(t, d, c) : tronco(t, d, c);
   t.vinco(idT, d.tronco.rampa[0]);
   // 4) braço da frente e cabeça (de costas, braço erguido fica atrás da cabeça)
   const bracoAlto = mN[1] < oN[1] - 4;
@@ -443,7 +567,8 @@ function desenharQuadro(t, nome, forma, pose, vista, ox, oy) {
     t.vinco(id, B.rampa[0]);
   };
   const lider = () => { if (!troca) return; const id = braco(oF, mF, true, esticaLider); t.vinco(id, B.rampa[0]); };
-  if (costas && bracoAlto) { frenteBraco(); cabeca(t, d, c); }
+  if (perfil) { lider(); frenteBraco(); const idH = cabecaPerfil(t, d, c); if (idH) t.vinco(idH, TINTA); }   // de lado a cabeça fica à frente do ombro
+  else if (costas && bracoAlto) { frenteBraco(); cabeca(t, d, c); }
   else { const idH = cabeca(t, d, c); if (idH) t.vinco(idH, TINTA); lider(); frenteBraco(); }
   if (costas && bracoAlto) lider();
   item();
@@ -546,10 +671,11 @@ function poses(nome, forma) {
   return A;
 }
 
+export const VISTAS = ['f', 'c', 'p'];
 export const ANIMACOES = ['parado', 'andar', 'correr', 'pulo', 'queda', 'pouso', 'golpe', 'identidade', 'dano', 'guarda', 'segurar', 'planar', 'rugido'];
 
 // ---------------------------------------------------------------- atlas
-// Layout: blocos [luz esquerda: vista f, vista c][luz direita: vista f, vista c];
+// Layout: blocos [luz esquerda: vistas f, c, p][luz direita: vistas f, c, p];
 // dentro do bloco as animações vêm em sequência, 8 por linha.
 const cacheAtlas = new Map();
 const cacheCor = new Map();
@@ -559,12 +685,13 @@ function rgb(hex) {
   return c;
 }
 
-export function montarFolha(nome, forma) {
+// gerador: desenha um bloco (luz × vista) por passo, para a geração em segundo plano não travar
+function* gerarFolha(nome, forma) {
   const A = poses(nome, forma);
   const lista = [];
   for (const an of ANIMACOES) A[an].forEach((p, i) => lista.push({ an, i, p }));
   const porBloco = Math.ceil(lista.length / COLS);
-  const linhas = porBloco * 4;
+  const linhas = porBloco * 2 * VISTAS.length;
   const canvas = document.createElement('canvas');
   canvas.width = COLS * CEL_W; canvas.height = linhas * CEL_H;
   const g = canvas.getContext('2d');
@@ -572,7 +699,7 @@ export function montarFolha(nome, forma) {
   const indice = {};   // an -> [células dentro do bloco]
   lista.forEach((q, k) => { (indice[q.an] ??= []).push(k); });
   let bloco = 0;
-  for (const luz of [-1, 1]) for (const vista of ['f', 'c']) {
+  for (const luz of [-1, 1]) for (const vista of VISTAS) {
     lista.forEach((q, k) => {
       const cel = bloco * porBloco * COLS + k;
       const t = new Tela(CEL_W, CEL_H, luz);
@@ -586,15 +713,22 @@ export function montarFolha(nome, forma) {
       });
     });
     bloco++;
+    yield bloco;
   }
   g.putImageData(img, 0, 0);
   return { canvas, indice, porBloco, linhas, total: lista.length, lista };
 }
 
+export function montarFolha(nome, forma, gen = gerarFolha(nome, forma)) {
+  for (;;) { const r = gen.next(); if (r.done) return r.value; }
+}
+const emAndamento = new Map();   // chave -> gerador parcial (preaquecerMacacos)
+
 export function atlasMacaco(nome, forma) {
   const chave = nome + '_' + forma;
   if (cacheAtlas.has(chave)) return cacheAtlas.get(chave);
-  const f = montarFolha(nome, forma);
+  const f = montarFolha(nome, forma, emAndamento.get(chave));
+  emAndamento.delete(chave);
   const tex = new THREE.CanvasTexture(f.canvas);
   tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false;
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -607,7 +741,7 @@ export function atlasMacaco(nome, forma) {
     quadro(textura, an, i, vista, luz) {
       const lst = f.indice[an] ?? f.indice.parado;
       const k = lst[((i % lst.length) + lst.length) % lst.length];
-      const bloco = (luz < 0 ? 0 : 2) + (vista === 'c' ? 1 : 0);
+      const bloco = (luz < 0 ? 0 : VISTAS.length) + Math.max(0, VISTAS.indexOf(vista));
       const cel = bloco * f.porBloco * COLS + k;
       const col = cel % COLS, lin = Math.floor(cel / COLS);
       textura.offset.set(col / COLS, 1 - (lin + 1) / f.linhas);
@@ -621,10 +755,16 @@ export function atlasMacaco(nome, forma) {
 export function preaquecerMacacos() {
   const fila = [];
   for (const n of ['hugo', 'chico', 'orlando']) for (const f of ['normal', 'surto']) fila.push([n, f]);
+  // um bloco (~1/6 do atlas) por vez; se o jogo pedir o atlas antes, atlasMacaco termina o resto
   const prox = () => {
-    const x = fila.shift(); if (!x) return;
-    atlasMacaco(...x);
-    setTimeout(prox, 120);
+    const x = fila[0]; if (!x) return;
+    const chave = x[0] + '_' + x[1];
+    if (cacheAtlas.has(chave)) { fila.shift(); setTimeout(prox, 30); return; }
+    let gen = emAndamento.get(chave);
+    if (!gen) emAndamento.set(chave, gen = gerarFolha(...x));
+    const r = gen.next();
+    if (r.done) { emAndamento.set(chave, (function* () { return r.value; })()); atlasMacaco(...x); fila.shift(); }   // folha pronta: vira textura
+    setTimeout(prox, 60);
   };
   setTimeout(prox, 400);
 }
@@ -640,7 +780,8 @@ export function folhaDeContato(escala = 2, porLinha = 15) {
   const rotulo = 76, cab = 16, gap = 10;
   const faixas = folhas.reduce((s, F) => s + Math.ceil(F.total / porLinha), 0);
   const W = rotulo + porLinha * CEL_W;
-  const H = 24 + faixas * (cab + 2 * CEL_H + gap) + folhas.length * 6 + 24 + hum.reduce((s, x) => s + x.h + cab + gap, 0);
+  const NV = VISTAS.length;
+  const H = 24 + faixas * (cab + NV * CEL_H + gap) + folhas.length * 6 + 24 + hum.reduce((s, x) => s + x.h + cab + gap, 0);
   const c = document.createElement('canvas');
   c.width = W * escala; c.height = H * escala;
   const g = c.getContext('2d');
@@ -653,7 +794,7 @@ export function folhaDeContato(escala = 2, porLinha = 15) {
     g.fillRect(dx * escala, dy * escala, w * escala, h * escala);
     g.drawImage(img, sx, sy, w, h, dx * escala, dy * escala, w * escala, h * escala);
   };
-  texto('Primordia: macacos quadro a quadro, 32 px = 1 tile. Linhas: 3/4 frente / 3/4 costas (luz da esquerda; direita = espelho).', 4, 6, '#e9e1cf');
+  texto('Primordia: macacos quadro a quadro, 32 px = 1 tile. Linhas: 3/4 frente / 3/4 costas / perfil (luz da esquerda; direita = espelho).', 4, 6, '#e9e1cf');
   let y = 24;
   for (const F of folhas) {
     for (let ini = 0; ini < F.total; ini += porLinha) {
@@ -665,14 +806,14 @@ export function folhaDeContato(escala = 2, porLinha = 15) {
         else texto(String(q.i + 1), x + 2, y + 3, '#7a7466');
       }
       texto(F.n, 4, y + cab + 8, '#e9e1cf'); texto(F.f, 4, y + cab + 20, '#b0a890');
-      for (let v = 0; v < 2; v++) {
-        texto(v ? 'costas' : 'frente', 4, y + cab + v * CEL_H + 40, '#7a7466');
+      for (let v = 0; v < NV; v++) {
+        texto(['frente', 'costas', 'perfil'][v], 4, y + cab + v * CEL_H + 40, '#7a7466');
         for (let k = ini; k < fim; k++) {
           const cel = v * F.porBloco * COLS + k;
           celula(F.canvas, (cel % COLS) * CEL_W, Math.floor(cel / COLS) * CEL_H, CEL_W, CEL_H, rotulo + (k - ini) * CEL_W, y + cab + v * CEL_H, (k + v) % 2);
         }
       }
-      y += cab + 2 * CEL_H + gap;
+      y += cab + NV * CEL_H + gap;
     }
     y += 6;
   }

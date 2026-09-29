@@ -1,6 +1,6 @@
 // Exporta a arte dos macacos gerada por código (src/fx/macacos.js) para conferência:
-//   referencias/folha-macacos.png            folha de contato (todos os quadros, vistas f/c)
-//   referencias/macacos/<nome>_<forma>.png   atlas usado no jogo (luz esq./dir. × vistas)
+//   referencias/folha-macacos.png            folha de contato (todos os quadros, vistas f/c/p)
+//   referencias/macacos/<nome>_<forma>.png   atlas usado no jogo (luz esq./dir. × vistas f/c/p)
 // Uso: node scripts/exportar-macacos.mjs [escala=3]
 // Não precisa de build: serve a raiz do projeto e resolve 'three' por import map.
 import { createRequire } from 'module';
@@ -18,8 +18,13 @@ const pagina = `<!doctype html><script type="importmap">{"imports":{"three":"/no
 import { folhaDeContato, montarFolha } from '/src/fx/macacos.js';
 window.pronto = (async () => {
   const out = { folha: folhaDeContato(${escala}).toDataURL() };
-  for (const n of ['hugo', 'chico', 'orlando']) for (const f of ['normal', 'surto']) out[n + '_' + f] = montarFolha(n, f).canvas.toDataURL();
-  return out;
+  const ms = {};
+  for (const n of ['hugo', 'chico', 'orlando']) for (const f of ['normal', 'surto']) {
+    const t0 = performance.now(), F = montarFolha(n, f);
+    ms[n + '_' + f] = Math.round(performance.now() - t0) + ' ms, ' + F.canvas.width + 'x' + F.canvas.height;
+    out[n + '_' + f] = F.canvas.toDataURL();
+  }
+  return { out, ms };
 })();
 </script>`;
 const tipos = { '.js': 'text/javascript', '.html': 'text/html' };
@@ -35,7 +40,8 @@ const nav = await pw.chromium.launch();
 const pag = await nav.newPage();
 pag.on('pageerror', (e) => console.error('erro:', e.message));
 await pag.goto(`http://localhost:${srv.address().port}/`);
-const imgs = await pag.evaluate(() => window.pronto);
+const { out: imgs, ms } = await pag.evaluate(() => window.pronto);
+for (const [k, v] of Object.entries(ms)) console.log('atlas', k, v);
 fs.mkdirSync('referencias/macacos', { recursive: true });
 for (const [k, url] of Object.entries(imgs)) {
   const arq = k === 'folha' ? 'referencias/folha-macacos.png' : `referencias/macacos/${k}.png`;

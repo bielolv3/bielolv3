@@ -284,13 +284,20 @@ const decoAlta = [];    // deco sobre paredes que baixam quando o jogador passa 
 let poeira = null;
 
 const matSprite = new Map();
+// tom ambiente do bioma na deco-sprite (só o matiz: sol/sombra de jogo.luzSprites, normalizado)
+const tomDeco = new THREE.Color(1, 1, 1);
+let luzTingida = null;
+function tingir(mat) { if (!mat.userData.aditivo) mat.color.copy(mat.userData.base).multiply(tomDeco); }
 function spriteDeco(nome, larg, { cor = 0xd8ccb4, profundidade = 0.25, aditivo = false } = {}) {
   const chave = nome + cor + aditivo;
   if (!matSprite.has(chave)) {
-    matSprite.set(chave, fixo(new THREE.SpriteMaterial({
+    const mat = fixo(new THREE.SpriteMaterial({
       map: texturaSprite(nome), color: cor, alphaTest: aditivo ? 0 : 0.5, transparent: aditivo,
       blending: aditivo ? THREE.AdditiveBlending : THREE.NormalBlending, depthWrite: !aditivo, fog: true,
-    })));
+    }));
+    mat.userData.base = new THREE.Color(cor); mat.userData.aditivo = aditivo;
+    tingir(mat);
+    matSprite.set(chave, mat);
   }
   const s = new THREE.Sprite(matSprite.get(chave));
   const tex = s.material.map;
@@ -589,6 +596,13 @@ function criarPoeira(mapa) {
 const ELEV = Math.PI / 6;
 export function atualizarVisual(jogo, dt) {
   U.uTempo.value += dt;
+  const L = jogo.luzSprites;
+  if (L && L !== luzTingida) {
+    luzTingida = L;
+    tomDeco.copy(L.sol).lerp(L.ambiente, 0.35);
+    tomDeco.multiplyScalar(1 / Math.max(tomDeco.r, tomDeco.g, tomDeco.b, 0.01));
+    for (const m of matSprite.values()) tingir(m);
+  }
   const t = U.uTempo.value;
   const cam = jogo.camera, a = cam.anguloAtual;
   U.uVista.value.set(Math.cos(a) * Math.cos(ELEV), Math.sin(ELEV), Math.sin(a) * Math.cos(ELEV));

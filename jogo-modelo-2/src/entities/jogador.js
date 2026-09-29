@@ -164,14 +164,20 @@ export class Jogador extends Entidade {
     else { an = 'parado'; i = Math.floor(A.t * 2.6) % 4; A.fase = 0; }
     A.anim = an; A.quadro = i;
 
-    // vista: de costas quando anda para o fundo da tela (a câmera gira de 90 em 90°)
+    // vista pela direção relativa à câmera (gira de 90 em 90°): dominante vertical na tela ->
+    // frente/costas; dominante horizontal -> perfil. Histerese: só troca quando o outro eixo
+    // passa com folga (evita piscar na diagonal).
     const cam = this.jogo.camera;
     const fr = cam.eixoParaMundo({ x: 0, y: 1 });
+    const dir = _direita.setFromMatrixColumn(cam.cam.matrixWorld, 0);
     const prof = this.olhando.x * fr.x + this.olhando.z * fr.z;
-    if (prof > 0.3) A.vista = 'c';
+    const lado = Math.abs(this.olhando.x * dir.x + this.olhando.z * dir.z), vert = Math.abs(prof);
+    const HIST = 1.35;
+    if (A.vista === 'p') { if (vert > lado * HIST) A.vista = prof > 0 ? 'c' : 'f'; }
+    else if (lado > vert * HIST) A.vista = 'p';
+    else if (prof > 0.3) A.vista = 'c';
     else if (prof < -0.3) A.vista = 'f';
     // luz: do mesmo lado do sol na tela (compensando o espelho)
-    const dir = _direita.setFromMatrixColumn(cam.cam.matrixWorld, 0);
     const sol = this.jogo.sol;
     let ladoSol = -1;
     if (sol) ladoSol = Math.sign((sol.position.x - sol.target.position.x) * dir.x + (sol.position.z - sol.target.position.z) * dir.z) || -1;

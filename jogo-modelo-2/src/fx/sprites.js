@@ -119,12 +119,6 @@ const DESENHOS = {
     t.re(4, 10, 20, 5, ACO, 3);
     t.el(14, 6, 5, 5, QUANTA); t.set(13, 5, QUANTA[4]); t.set(14, 5, QUANTA[4]);
   }],
-  construtor: [22, 22, (t) => {
-    t.linha(4, 14, 1, 20, QUANTA[1]); t.linha(18, 14, 21, 20, QUANTA[1]);
-    t.el(11, 10, 7, 7, ['#6a6f7a', '#9aa3ae', '#c8ced6', '#e9e1cf']);
-    t.el(11, 10, 3, 3, [QUANTA[1], QUANTA[2], QUANTA[3], QUANTA[4]]);
-    t.set(1, 21, '#b08bc4'); t.set(21, 21, '#b08bc4');
-  }],
   andador: [74, 82, (t) => {
     const pernas = [[14, -1], [28, -1], [46, 1], [60, 1]];
     for (const [x, s] of pernas) { t.linha(x, 42, x + s * 8, 30, ACO[2]); t.linha(x + 1, 42, x + 1 + s * 8, 30, ACO[3]); t.linha(x + s * 8, 30, x + s * 12, 80, ACO[1]); t.linha(x + s * 8 + 1, 30, x + s * 12 + 1, 80, ACO[2]); t.el(x + s * 12, 79, 3, 2, ACO); }
@@ -246,6 +240,28 @@ function dronePose(t, p = {}) {
   t.linha(11, 3, 11, 5, ACO[2]);
   if (h) { t.linha(8, 2, 14, 2, ACO[3]); t.set(11, 2, ACO[4]); }
   else { t.linha(3, 2, 19, 2, ACO[2]); t.linha(5, 1, 17, 1, ACO[4]); }
+}
+
+// Drone Construtor: hélice girando + flutuação (2 quadros); reerguendo selo: pinças
+// abertas para baixo e feixe teal do núcleo até o chão (pulsa).
+const LOUCA = ['#6a6f7a', '#9aa3ae', '#c8ced6', '#e9e1cf'];
+function construtorPose(t, p = {}) {
+  const b = p.by ?? 0, cy = 12 + b;
+  if (p.feixe) {                                                                     // feixe até o selo
+    for (let y = cy + 4; y < 24; y++) { t.set(10, y, QUANTA[2]); t.set(11, y, QUANTA[p.brilho ? 4 : 3]); t.set(12, y, QUANTA[2]); }
+    for (const [x, y] of p.brilho ? [[8, 20], [14, 22], [7, 23], [15, 18]] : [[9, 22], [13, 19], [15, 23]]) t.set(x, y, QUANTA[3]);
+    t.linha(5, cy + 3, 7, cy + 9, QUANTA[1]); t.linha(17, cy + 3, 15, cy + 9, QUANTA[1]);   // pinças para dentro
+    t.set(8, cy + 9, '#b08bc4'); t.set(14, cy + 9, '#b08bc4');
+  } else {
+    t.linha(5, cy + 3, 2, cy + 9, QUANTA[1]); t.linha(17, cy + 3, 20, cy + 9, QUANTA[1]);
+    t.set(2, cy + 10, '#b08bc4'); t.set(20, cy + 10, '#b08bc4');
+  }
+  t.el(11, cy, 7, 7, LOUCA);
+  const r = p.feixe ? (p.brilho ? 3.6 : 3.2) : 3;
+  t.el(11, cy, r, r, [QUANTA[1], QUANTA[2], QUANTA[3], QUANTA[4]]);
+  t.linha(11, cy - 9, 11, cy - 7, ACO[2]);                                            // mastro + hélice
+  if (p.helice) { t.linha(8, cy - 10, 14, cy - 10, ACO[3]); t.set(11, cy - 10, ACO[4]); }
+  else { t.linha(3, cy - 10, 19, cy - 10, ACO[2]); t.linha(5, cy - 11, 17, cy - 11, ACO[4]); }
 }
 
 // Torre: núcleo teal que respira; na sobrecarga incha, solta faíscas e o orbe cresce.
@@ -399,6 +415,10 @@ const ANIMADOS = {
     parado: [{}, { helice: 1 }],
     preparo: [{ aviso: true }, { aviso: true, helice: 1, brilho: true }],
   }, dronePose, { fps: 14 }],
+  construtor: [22, 24, 11, {
+    parado: [{}, { helice: 1, by: 1 }, { by: 1 }, { helice: 1 }],
+    preparo: [{ feixe: true }, { feixe: true, helice: 1, brilho: true }],
+  }, construtorPose, { fps: 12 }],
   torre: [32, 58, 16, {
     parado: [{}, { pulso: 1 }],
     preparo: [{ carga: 1, pulso: 0 }, { carga: 1, pulso: 1 }, { carga: 2, pulso: 2 }],
@@ -476,6 +496,9 @@ export function animarInimigo(ent, dt) {
   if (!A || !s) return;
   A.t += dt;
   const { f } = A;
+  // quem tem máquina de estados própria escolhe o quadro: ent.quadroAnimado() -> [animação, i]
+  const q = ent.quadroAnimado?.(A.t);
+  if (q && f.indice[q[0]]) { const l = f.indice[q[0]]; A.tex.offset.x = l[q[1] % l.length] / f.n; return; }
   if ((A.prep ?? 0) > 0 && ent.preparo <= 0 && ent.atordoado <= 0) A.pos = 0.22;
   A.prep = ent.preparo;
   A.pos = Math.max(0, (A.pos ?? 0) - dt);
@@ -618,33 +641,98 @@ Object.assign(DESENHOS, {
     t.el(11, 7, 3.5, 4, ['#b0a890', '#d8d0b8', '#f4eedc']); t.el(18, 6, 3.5, 4.5, ['#b0a890', '#d8d0b8', '#f4eedc']); t.el(24, 8, 3, 3.5, ['#b0a890', '#d8d0b8', '#f4eedc']);
     t.set(18, 4, '#7a9a5a'); t.set(11, 6, '#7a9a5a');
   }],
-  // A Matriarca: colosso de pedra e raiz, com mata nos ombros e núcleo âmbar no peito
-  matriarca: [150, 184, (t) => {
-    const PED = ['#1e2418', '#2e3824', '#44503a', '#5c6a4c', '#78885e', '#96a676'];
-    const RZ = ['#1a120b', '#2e2014', '#46321e', '#5e4428', '#7a5a36'];
-    t.re(38, 132, 26, 50, PED, 2); t.re(88, 132, 26, 50, PED, 2);           // pernas-pilar
-    for (let y = 138; y < 180; y += 8) { t.linha(39, y, 62, y, PED[1]); t.linha(89, y, 112, y, PED[1]); }
-    t.el(75, 92, 52, 46, PED);                                              // tronco
-    t.el(30, 60, 22, 18, PED); t.el(120, 60, 22, 18, PED);                  // ombros
-    t.re(10, 66, 22, 70, PED, 2); t.re(118, 66, 22, 70, PED, 2);            // braços
-    t.el(20, 138, 13, 10, PED); t.el(130, 138, 13, 10, PED);                // punhos
-    for (let y = 70; y < 132; y += 10) { t.linha(11, y, 30, y, PED[1]); t.linha(119, y, 138, y, PED[1]); }
-    for (let y = 60; y < 130; y += 11) t.linha(34, y, 116, y + 2, PED[1]);   // juntas dos blocos
-    t.el(75, 44, 15, 12, PED);                                              // cabeça
-    t.re(64, 42, 22, 3, [AMBAR[0], AMBAR[1], AMBAR[2]], 1);                 // olhos em fenda
-    t.el(75, 86, 13, 13, PED.slice(0, 3));                                  // anel do núcleo
-    t.el(75, 86, 8, 8, AMBAR); t.el(75, 86, 3, 3, [AMBAR[2], AMBAR[3]]);   // núcleo
-    // raízes enroscadas pelo corpo todo
-    const raiz = (x, y, n, dx) => { for (let k = 0; k < n; k++) { t.set(x, y, RZ[2 + (k % 2)]); t.set(x + 1, y, RZ[1]); y++; x += Math.round(Math.sin(k * 0.35 + dx) * 1.2); } };
-    for (let k = 0; k < 16; k++) raiz(20 + ((k * 37) % 112), 48 + ((k * 23) % 50), 26 + ((k * 13) % 50), k);
-    for (let k = 0; k < 8; k++) raiz(12 + ((k * 17) % 20) + (k > 3 ? 106 : 0), 120, 20 + k * 3, k);
-    // cascatas escorrendo dos ombros
-    for (const x of [48, 100]) for (let y = 58; y < 150; y++) { t.set(x, y, '#c8e8e0'); t.set(x + 1, y, '#90c8c0'); if (y % 5 === 0) t.set(x + 2, y, '#e8fffa'); }
-    // mata nos ombros e na cabeça
-    for (const [cx, cy, rx, ry] of [[28, 44, 18, 12], [122, 44, 18, 12], [75, 28, 16, 10], [50, 52, 10, 7], [100, 52, 10, 7], [14, 54, 8, 6], [136, 54, 8, 6]]) t.el(cx, cy, rx, ry, FOLHA);
-    for (const [x, h] of [[24, 18], [70, 22], [84, 16], [118, 20], [36, 12]]) { t.linha(x, 40, x, 40 - h, RZ[3]); t.el(x, 40 - h, 6, 5, FOLHA); }
-  }],
 });
+
+// A Matriarca: colosso de pedra e raiz, com mata nos ombros e núcleo âmbar no peito.
+// Pose: by (tronco desce: respiração/peso), sw (mata balança), olho (0 apagado, 1 aceso,
+// 2 em brasa), perna (ergue a perna esquerda), impacto (poeira e rachaduras no pé),
+// braco ('alto' = braço direito erguido, 'golpe' = punho enterrado com raízes brotando),
+// esporos (1 = mata incha e pulsa, 2 = nuvem solta dos ombros).
+const PED = ['#1e2418', '#2e3824', '#44503a', '#5c6a4c', '#78885e', '#96a676'];
+const RZ = ['#1a120b', '#2e2014', '#46321e', '#5e4428', '#7a5a36'];
+const ESPORO = ['#4a7a28', '#7cc048', '#c8f080', '#f0ffc0'];
+function matriarcaPose(t, p = {}) {
+  const sw = p.sw ?? 0, olho = p.olho ?? 0, pl = p.perna ?? 0, esp = p.esporos ?? 0;
+  const by = (p.by ?? 0) - Math.round(pl * 0.25);
+  // pernas-pilar (a esquerda pode subir)
+  t.re(38, 132 - pl, 26, 50, PED, 2); t.re(88, 132, 26, 50, PED, 2);
+  for (let y = 138; y < 180; y += 8) { t.linha(39, y - pl, 62, y - pl, PED[1]); t.linha(89, y, 112, y, PED[1]); }
+  t.el(75, 92 + by, 52, 46, PED);                                                   // tronco
+  t.el(30, 60 + by, 22, 18, PED); t.el(120, 60 + by, 22, 18, PED);                  // ombros
+  t.re(10, 66 + by, 22, 70, PED, 2); t.el(20, 138 + by, 13, 10, PED);               // braço esquerdo
+  for (let y = 70; y < 132; y += 10) t.linha(11, y + by, 30, y + by, PED[1]);
+  if (p.braco === 'alto') {                                                          // braço direito erguido
+    t.re(118, 8 + by, 22, 60, PED, 2); t.el(129, 8 + by, 13, 10, PED);
+    for (let y = 14; y < 62; y += 10) t.linha(119, y + by, 138, y + by, PED[1]);
+  } else if (p.braco === 'golpe') {                                                 // punho enterrado no chão
+    t.re(118, 66 + by, 22, 104 - by, PED, 2); t.el(129, 172, 15, 10, PED);
+    for (let y = 72; y < 164; y += 10) t.linha(119, y + by, 138, y + by, PED[1]);
+  } else {
+    t.re(118, 66 + by, 22, 70, PED, 2); t.el(130, 138 + by, 13, 10, PED);
+    for (let y = 70; y < 132; y += 10) t.linha(119, y + by, 138, y + by, PED[1]);
+  }
+  for (let y = 60; y < 130; y += 11) t.linha(34, y + by, 116, y + 2 + by, PED[1]);  // juntas dos blocos
+  t.el(75, 44 + by, 15, 12, PED);                                                   // cabeça
+  // olhos em fenda: apagados / acesos / em brasa
+  if (olho === 0) t.re(64, 42 + by, 22, 3, [AMBAR[0], AMBAR[1], AMBAR[2]], 1);
+  else {
+    t.re(63, 41 + by, 24, 4, olho > 1 ? [AMBAR[1], AMBAR[2], AMBAR[3]] : [AMBAR[0], AMBAR[1], AMBAR[2], AMBAR[3]], olho > 1 ? 1 : 2);
+    t.linha(66, 42 + by, 84, 42 + by, AMBAR[3]);
+    if (olho > 1) {   // brasa escorrendo dos olhos, sobrancelha de pedra baixa
+      t.linha(58, 38 + by, 64, 41 + by, AMBAR[2]); t.linha(92, 38 + by, 86, 41 + by, AMBAR[2]);
+      t.linha(62, 38 + by, 74, 40 + by, PED[0]); t.linha(88, 38 + by, 76, 40 + by, PED[0]);
+      t.set(68, 46 + by, AMBAR[1]); t.set(68, 47 + by, AMBAR[1]); t.set(82, 46 + by, AMBAR[1]);
+    }
+  }
+  if (olho > 1) for (const [dx, dy] of [[-22, -14], [20, -16], [-24, 8], [24, 10], [-8, 24], [10, 22], [0, -26]]) {   // rachaduras em brasa
+    t.linha(75, 86 + by, 75 + dx, 86 + dy + by, AMBAR[1]); t.linha(75, 87 + by, 75 + dx * 0.7, 87 + dy * 0.7 + by, AMBAR[2]);
+  }
+  t.el(75, 86 + by, 13, 13, PED.slice(0, 3));                                       // anel do núcleo
+  const rn = olho > 1 ? 9.5 : olho ? 8.8 : 8;
+  t.el(75, 86 + by, rn, rn, olho ? AMBAR.slice(1) : AMBAR); t.el(75, 86 + by, 3 + (olho > 1), 3 + (olho > 1), [AMBAR[2], AMBAR[3]]);
+  // raízes enroscadas pelo corpo todo
+  const raiz = (x, y, n, dx, s = 0) => { for (let k = 0; k < n; k++) { t.set(x + Math.round(s * k / n), y, RZ[2 + (k % 2)]); t.set(x + 1 + Math.round(s * k / n), y, RZ[1]); y++; x += Math.round(Math.sin(k * 0.35 + dx) * 1.2); } };
+  for (let k = 0; k < 16; k++) raiz(20 + ((k * 37) % 112), 48 + ((k * 23) % 50) + by, 26 + ((k * 13) % 50), k);
+  // raízes pendendo das mãos (balançam com a mata)
+  for (let k = 0; k < 8; k++) { if (k > 3 && p.braco) continue; raiz(12 + ((k * 17) % 20) + (k > 3 ? 106 : 0), 120 + by, 20 + k * 3, k, sw * 2); }
+  // cascatas escorrendo dos ombros
+  for (const x of [48, 100]) for (let y = 58 + by; y < 150; y++) { t.set(x, y, '#c8e8e0'); t.set(x + 1, y, '#90c8c0'); if ((y + (p.agua ?? 0)) % 5 === 0) t.set(x + 2, y, '#e8fffa'); }
+  // mata nos ombros e na cabeça (incha soltando esporos)
+  const inc = esp === 1 ? 2 : 0;
+  for (const [cx, cy, rx, ry, m] of [[28, 44, 18, 12, 1], [122, 44, 18, 12, 1], [75, 28, 16, 10, 0.5], [50, 52, 10, 7, 0.5], [100, 52, 10, 7, 0.5], [14, 54, 8, 6, 1], [136, 54, 8, 6, 1]]) {
+    if (p.braco === 'alto' && cx > 110) { t.el(cx - 4, cy + by + 2, rx * 0.7, ry * 0.8, FOLHA); continue; }
+    t.el(cx + Math.round(sw * m), cy + by, rx + inc, ry + inc, FOLHA);
+  }
+  for (const [x, h] of [[24, 18], [70, 22], [84, 16], [118, 20], [36, 12]]) {
+    const tx = x + sw * 2;
+    t.linha(x, 40 + by, tx, 40 - h + by, RZ[3]); t.el(tx, 40 - h + by, 6 + inc * 0.5, 5 + inc * 0.5, FOLHA);
+  }
+  if (esp === 1) for (let k = 0; k < 22; k++) t.set(12 + ((k * 53) % 126), 30 + ((k * 29) % 30) + by, ESPORO[2 + (k % 2)]);
+  if (esp === 2) for (const [cx, cy, r] of [[28, 24, 9], [122, 22, 10], [75, 10, 8], [48, 12, 6], [104, 8, 6], [10, 36, 5], [140, 34, 5]]) {
+    t.el(cx, cy + by, r, r * 0.8, ESPORO);
+    for (let k = 0; k < 5; k++) t.set(cx - r + ((k * 7) % (2 * r)), cy + by - r + ((k * 5) % r), ESPORO[3]);
+  }
+  // pisão: poeira e rachaduras em volta do pé
+  if (p.impacto) {
+    for (const [cx, cy, rx, ry] of [[20, 176, 20, 8], [84, 175, 18, 9], [10, 164, 10, 6], [70, 164, 10, 6], [128, 178, 16, 6], [40, 158, 7, 4]]) t.el(cx, cy, rx, ry, ['#6a5a40', '#8a7a5a', '#b0a07a', '#d0c098']);
+    t.linha(50, 182, 30, 183, TINTA); t.linha(52, 182, 70, 180, TINTA); t.linha(44, 183, 36, 176, '#3a2e20');
+    for (let k = 0; k < 8; k++) t.set(8 + k * 17, 150 + ((k * 11) % 16), '#b0a07a');
+  }
+  // chicote: raízes brotando do chão em volta do punho
+  if (p.braco === 'golpe') for (const [x, h] of [[100, 22], [108, 34], [114, 26], [146, 30], [140, 40], [122, 18], [96, 14]]) { t.linha(x, 183, x + 2, 183 - h, RZ[3]); t.linha(x + 1, 183, x + 3, 183 - h, RZ[2]); t.set(x + 2, 182 - h, RZ[4]); }
+  if (p.braco === 'alto' && olho > 1) for (let k = 0; k < 6; k++) t.set(118 + k * 4, 2 + (k % 2) * 2 + by, AMBAR[2]);   // raízes crispando no punho
+}
+ANIMADOS.matriarca = [150, 184, 75, {
+  calma: [{ olho: 0 }, { by: 1, sw: 1, agua: 1 }, { by: 2, sw: 2, agua: 2 }, { by: 1, sw: -1, agua: 3 }],
+  despertar: [{ olho: 1, by: 1 }, { olho: 2, by: -1, sw: 1 }],
+  ira: [{ olho: 2, by: 1, sw: 1, agua: 1 }, { olho: 1, by: 0, sw: -1, agua: 3 }],
+  pisaoPrep: [{ olho: 2, perna: 10, sw: -1 }, { olho: 2, perna: 14, sw: 1 }],
+  pisao: [{ olho: 2, by: 3, impacto: 1, sw: 2 }],
+  chicotePrep: [{ olho: 2, braco: 'alto', sw: -1 }, { olho: 2, braco: 'alto', by: -1, sw: 1 }],
+  chicote: [{ olho: 2, braco: 'golpe', by: 2, sw: 2 }],
+  esporosPrep: [{ olho: 1, esporos: 1, sw: 1 }, { olho: 2, esporos: 1, by: 1, sw: -1 }],
+  esporos: [{ olho: 2, esporos: 2, by: -1 }],
+}, matriarcaPose, { esquerda: true, fps: 1.6 }];
 TIPOS_INIMIGO.push('javali', 'planta', 'sapo', 'aranha', 'tartaruga', 'inseto', 'ninho', 'matriarca');
 // quadro 0 dos animados também serve de sprite estático (mesmas medidas)
 for (const [tipo, [w, h, , , desenho]] of Object.entries(ANIMADOS)) DESENHOS[tipo] = [w, h, (t) => desenho(t)];

@@ -62,6 +62,11 @@ const _dirTela = new THREE.Vector3();
 const _dirSol = new THREE.Vector3();
 const BRANCO = new THREE.Color(1, 1, 1);
 const AMOSTRAS_SOMBRA = [0.5, 0.9, 1.4];
+const _sombraCor = new THREE.Color();
+const FORCA_PONTUAL = 0.34;     // PointLights (braseiros, cristais, cogumelos) no sprite
+const SOMBRA_PAREDE = 0.82;     // sombra de parede = ambiente do bioma × isto
+const LUZ_MIN_JOGADOR = 0.62;   // luminância mínima do jogador
+const LUZ_MAX = 1.45;           // teto do uLuz (sem estourar)
 const amortecer = (atual, alvo, taxa, dt) => atual + (alvo - atual) * (1 - Math.exp(-taxa * dt));
 
 // Base de tudo que se move/interage. Contrato usado pelo jogo:
@@ -176,17 +181,26 @@ export class Entidade {
       for (const d of AMOSTRAS_SOMBRA) if (mapa.alturaEm(this.pos.x + _dirSol.x / hz * d, this.pos.z + _dirSol.z / hz * d) > y0 + tg * d) sombra += 1 / AMOSTRAS_SOMBRA.length;
     }
     this._sombraSol = dt > 0 && this._sombraSol !== undefined ? amortecer(this._sombraSol, sombra, 8, dt) : sombra;
-    const c = u.uLuz.value.copy(L.sol).lerp(L.ambiente, this._sombraSol);
+    // sombra de parede: um pouco abaixo do ambiente do bioma (mais legível que só o tom)
+    _sombraCor.copy(L.ambiente).multiplyScalar(SOMBRA_PAREDE);
+    const c = u.uLuz.value.copy(L.sol).lerp(_sombraCor, this._sombraSol);
     const cy = this.pos.y + 0.6;
     for (const { luz, p } of L.pontos) {
       if (!luz.visible || luz.intensity <= 0 || !luz.distance) continue;
       const d = Math.max(0.55, Math.hypot(p.x - this.pos.x, p.y - cy, p.z - this.pos.z));
       if (d >= luz.distance) continue;
-      const k = (1 - (d / luz.distance) ** 4) ** 2 / d ** luz.decay * luz.intensity * 0.16;
+      const k = (1 - (d / luz.distance) ** 4) ** 2 / d ** luz.decay * luz.intensity * FORCA_PONTUAL;
       c.r += luz.color.r * k; c.g += luz.color.g * k; c.b += luz.color.b * k;
     }
     if (this.surto?.ativo > 0) c.lerp(BRANCO, 0.5);   // Surto brilha por conta própria
-    c.setRGB(Math.min(c.r, 1.6), Math.min(c.g, 1.6), Math.min(c.b, 1.6));
+    // jogador nunca afunda demais (leitura em sala escura)
+    if (this.time === 'jogador') {
+      const lum = c.r * 0.3 + c.g * 0.55 + c.b * 0.15;
+      if (lum < LUZ_MIN_JOGADOR) c.multiplyScalar(LUZ_MIN_JOGADOR / Math.max(lum, 0.05));
+    }
+    // teto suave: comprime acima de 1 e corta em LUZ_MAX, mantendo o tom
+    const m = Math.max(c.r, c.g, c.b);
+    if (m > 1) c.multiplyScalar(Math.min(LUZ_MAX, 1 + (m - 1) / (1 + (m - 1) * 1.2)) / m);
   }
 
   // flash branco (entidade atingida)

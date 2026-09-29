@@ -82,8 +82,10 @@ src/
 Hugo, Chico e Orlando (normal e Surto) são desenhados por código em `src/fx/macacos.js`, na
 mesma densidade dos tiles (32 px = 1 unidade), com contorno de tinta de 1 px. Cada quadro sai de
 um esqueleto simples (pose -> tronco, cabeça, braços e pernas com IK de dois ossos) e vai para
-um atlas `CanvasTexture` (células 80×64, pés em x=32): vistas 3/4 de frente e 3/4 de costas,
-cada uma com luz da esquerda e da direita; a esquerda da tela é espelho no shader.
+um atlas `CanvasTexture` (células 80×64, pés em x=32): vistas 3/4 de frente, 3/4 de costas e
+perfil (6 blocos = 3 vistas × luz da esquerda/direita); a esquerda da tela é espelho no shader.
+A vista sai da direção na tela: eixo vertical dominante → frente/costas, horizontal → perfil, com
+histerese de 1,35× para não piscar na diagonal. `preaquecerMacacos` gera um bloco por vez em segundo plano.
 Animações: `parado, andar, correr, pulo, queda, pouso, golpe, identidade, dano, guarda,
 segurar, planar, rugido`. A máquina de estados fica em `Jogador.escolherQuadro` (vista pela
 direção relativa à câmera, luz pelo lado do sol na tela). Com `this.quadros = true` a

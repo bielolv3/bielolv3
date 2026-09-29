@@ -49,8 +49,8 @@ class Fauna extends Inimigo {
   // anel discreto no chão marca o território (ensina onde não pisar)
   montarTerritorio(r) {
     this.anelTerritorio = new THREE.Mesh(
-      new THREE.RingGeometry(r - 0.08, r, 48).rotateX(-Math.PI / 2),
-      new THREE.MeshBasicMaterial({ color: 0xc8b070, transparent: true, opacity: 0.22, depthWrite: false }),
+      new THREE.RingGeometry(r - 0.12, r, 48).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ color: 0xe8d090, transparent: true, opacity: 0.45, depthWrite: false }),
     );
     this.anelTerritorio.position.copy(this.posto).setY(this.posto.y + 0.04);
     // fica parado no posto (não acompanha o bicho)
@@ -122,8 +122,8 @@ class Fauna extends Inimigo {
     this.aviso.visible = !!this._tel || this.flashAviso > 0;
     if (this.anelTerritorio) {
       const m = this.anelTerritorio.material;
-      m.color.setHex(this.irritado ? 0xff6a4a : 0xc8b070);
-      m.opacity = this.irritado ? 0.35 : 0.22;
+      m.color.setHex(this.irritado ? 0xff6a4a : 0xe8d090);
+      m.opacity = this.irritado ? 0.6 : 0.45;
     }
     // vira o sprite (desenhado para a esquerda) conforme o lado da tela para onde vai
     if (!this.sprite) return;
@@ -632,7 +632,7 @@ export class InsetoLuz extends Entidade {
 const COR_AVISO = 0xff5a4a;
 export class Matriarca extends Fauna {
   constructor(jogo, x, z) {
-    super(jogo, x, z, { vida: 40, raio: 1.3, altura: 5.4, dano: 1, calma: 9 });
+    super(jogo, x, z, { vida: 60, raio: 1.3, altura: 6.8, dano: 1, calma: 9 });
     this.ehMatriarca = true;
     this.pesado = true;
     this.resisteAtordoar = true;
@@ -645,7 +645,7 @@ export class Matriarca extends Fauna {
     this.pisouRaiz = 0;
     this.linhas = [];
   }
-  montarVisual() { this.especie = 'matriarca'; aplicarSpriteInimigo(this, 'matriarca'); }
+  montarVisual() { this.especie = 'matriarca'; aplicarSpriteInimigo(this, 'matriarca', 1.25); }
   fisica() { this.vel.set(0, 0, 0); this.noChao = true; this.caiu = false; }
 
   provocar(motivo, centro) {
@@ -716,6 +716,7 @@ export class Matriarca extends Fauna {
     // quem está na raiz leva o chicote; senão alterna os três
     let p = this.pisouRaiz > 0 ? 'chicote' : ['pisao', 'chicote', 'esporos'][this.indice++ % 3];
     if (p === 'pisao' && this.distancia(alvo) > 8.5) p = 'esporos';
+    if (this.pisouRaiz <= 0 && this.distancia(alvo) < 3.5 && Math.random() < 0.5) p = 'pisao';   // colado nela: pisa
     if (p === 'chicote') {
       if (this.pisouRaiz <= 0) this.alvoChicote.copy(alvo.pos);
       this.linhaAtual = new ChicoteRaizes(this.jogo, this.pos, this.alvoChicote, this);
@@ -728,7 +729,7 @@ export class Matriarca extends Fauna {
     } else this.mudar('esporosPrep', 0.9);
   }
 
-  fimAtaque() { this.preparo = 0; this.telegrafar(false); this.mudar('pausa', this.vida < this.vidaMax / 2 ? 1.3 : 1.9); }
+  fimAtaque() { this.preparo = 0; this.telegrafar(false); this.mudar('pausa', this.vida < this.vidaMax / 2 ? 1.0 : 1.6); }
 
   // não é derrubada no meio de um golpe; só interrompe o preparo
   atordoar(t) { super.atordoar(t * 0.3); }

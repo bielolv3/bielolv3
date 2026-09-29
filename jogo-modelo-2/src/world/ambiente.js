@@ -20,13 +20,13 @@ const BIOMAS = {
     ceu: 0xf6dcaa, chao: 0x4a3822, hemi: 1.9, sol: 0xffdca6, forcaSol: 3.4,
     // gradiente do céu (sRGB 0..1): topo, meio, horizonte, nuvem, fundo, faixa, mar escuro/claro
     grad: [[0.16, 0.11, 0.05], [0.42, 0.29, 0.12], [0.80, 0.58, 0.24], [0.62, 0.46, 0.22], [0.20, 0.14, 0.07], [0.62, 0.45, 0.2], [0.56, 0.42, 0.21], [0.78, 0.62, 0.34]],
-    dossel: 0,
+    dossel: 0, faseColosso: 0.17,
   },
   seiva: {
     fundo: 0x14200f, nevoa: 0x4a6a3c, perto: 26, longe: 70, nevoaAltura: 0x2f4a2a,
     ceu: 0xd8f0b0, chao: 0x2a3418, hemi: 1.75, sol: 0xf0f4b8, forcaSol: 2.7,
     grad: [[0.05, 0.09, 0.04], [0.18, 0.30, 0.13], [0.62, 0.72, 0.38], [0.42, 0.56, 0.32], [0.08, 0.14, 0.07], [0.30, 0.44, 0.2], [0.34, 0.46, 0.28], [0.56, 0.68, 0.44]],
-    dossel: 1,
+    dossel: 1, faseColosso: 0.36,   // Matriarca à esquerda do céu na vista inicial
   },
 };
 
@@ -224,14 +224,14 @@ function criarCeu(jogo, B, bioma) {
       uGiro: { value: 0 }, uDesloc: { value: 0 }, uTempo: U.uTempo,
       uTopo: { value: v3(B.grad[0]) }, uMeio: { value: v3(B.grad[1]) }, uHor: { value: v3(B.grad[2]) },
       uNuvem: { value: v3(B.grad[3]) }, uFundo: { value: v3(B.grad[4]) }, uFaixa: { value: v3(B.grad[5]) },
-      uMarA: { value: v3(B.grad[6]) }, uMarB: { value: v3(B.grad[7]) }, uDossel: { value: B.dossel },
+      uMarA: { value: v3(B.grad[6]) }, uMarB: { value: v3(B.grad[7]) }, uDossel: { value: B.dossel }, uFaseColosso: { value: B.faseColosso },
     },
     vertexShader: /* glsl */`
       varying vec2 vUv;
       void main() { vUv = uv; gl_Position = vec4(position.xy, 0.9999, 1.0); }`,
     fragmentShader: /* glsl */`
       uniform sampler2D uLonge, uColosso; uniform float uAspecto, uAltTela, uGiro, uDesloc, uTempo;
-      uniform vec3 uTopo, uMeio, uHor, uNuvem, uFundo, uFaixa, uMarA, uMarB; uniform float uDossel;
+      uniform vec3 uTopo, uMeio, uHor, uNuvem, uFundo, uFaixa, uMarA, uMarB; uniform float uDossel, uFaseColosso;
       varying vec2 vUv;
       float h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
       float ruido(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
@@ -260,25 +260,8 @@ function criarCeu(jogo, B, bioma) {
         float n = fbm(vec2(u * 3.0 + uGiro * 2.0 + uTempo * 0.01, y * 7.0));
         float faixa = smoothstep(0.62, 0.95, y) * step(0.58 + d * 0.12, n);
         c = mix(c, uFaixa, faixa * 0.5);
-        // camadas do horizonte (texturas panorâmicas de 1440 x 120 texels)
-        // camadas do horizonte (texturas panorâmicas de 1440 x 120 texels)
-        float vl = (y - 0.47) / 0.45;
-        if (vl > 0.0 && vl < 1.0) {
-          vec4 l = texture2D(uLonge, vec2(u * 120.0 / 0.45 / 1440.0 - uGiro * 0.7 - uDesloc * 0.4, vl));
-          c = mix(c, l.rgb, l.a * 0.55);
-        }
-        float vc = (y - 0.55) / 0.45;
-        if (vc > 0.0 && vc < 1.0) {
-          vec4 k = texture2D(uColosso, vec2(u * 120.0 / 0.45 / 1440.0 - uGiro - uDesloc + 0.17, vc));
-          c = mix(c, k.rgb, k.a * 0.85);
-        }
-        // mar de nuvens na base do horizonte, cobrindo pés do colosso
-        float m = fbm(vec2(u * 5.0 - uGiro * 3.0 + uTempo * 0.015, y * 14.0));
-        float mar = (1.0 - smoothstep(0.42, 0.56, y + (m - 0.5) * 0.12));
-        float cr = step(0.5 + d * 0.15, m);
-        vec3 corMar = mix(uMarA, uMarB, cr);
-        c = mix(c, mix(corMar, fundo, smoothstep(0.35, 0.0, y)), mar);
         // dossel (Seiva): folhagem escura cobrindo o alto, com frestas de luz e raios caindo
+        // (vem antes das camadas do horizonte: a Matriarca aparece na frente das folhas)
         if (uDossel > 0.5) {
           float f = fbm(vec2(u * 6.0 - uGiro * 4.0 + sin(uTempo * 0.2) * 0.02, y * 9.0));
           float cob = smoothstep(0.66, 0.9, y + (f - 0.5) * 0.35);
@@ -289,6 +272,23 @@ function criarCeu(jogo, B, bioma) {
           float raio = pow(max(0.0, sin(u * 9.0 - uGiro * 6.0 + y * 1.5)), 24.0) * smoothstep(0.35, 0.8, y) * (1.0 - cob);
           c += vec3(0.35, 0.42, 0.2) * raio * 0.35 * step(d, 0.8);
         }
+        // camadas do horizonte (texturas panorâmicas de 1440 x 120 texels)
+        float vl = (y - 0.47) / 0.45;
+        if (vl > 0.0 && vl < 1.0) {
+          vec4 l = texture2D(uLonge, vec2(u * 120.0 / 0.45 / 1440.0 - uGiro * 0.7 - uDesloc * 0.4, vl));
+          c = mix(c, l.rgb, l.a * 0.55);
+        }
+        float vc = (y - 0.55) / 0.45;
+        if (vc > 0.0 && vc < 1.0) {
+          vec4 k = texture2D(uColosso, vec2(u * 120.0 / 0.45 / 1440.0 - uGiro - uDesloc + uFaseColosso, vc));
+          c = mix(c, k.rgb, k.a * 0.85);
+        }
+        // mar de nuvens na base do horizonte, cobrindo pés do colosso
+        float m = fbm(vec2(u * 5.0 - uGiro * 3.0 + uTempo * 0.015, y * 14.0));
+        float mar = (1.0 - smoothstep(0.42, 0.56, y + (m - 0.5) * 0.12));
+        float cr = step(0.5 + d * 0.15, m);
+        vec3 corMar = mix(uMarA, uMarB, cr);
+        c = mix(c, mix(corMar, fundo, smoothstep(0.35, 0.0, y)), mar);
         gl_FragColor = vec4(pow(c, vec3(2.2)), 1.0);
         #include <colorspace_fragment>
       }`,

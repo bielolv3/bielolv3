@@ -63,7 +63,7 @@ export default {
   dicas: [
     { texto: 'A mata da Seiva: os bichos daqui não atacam primeiro', atraso: 1.5 },
     { texto: 'Sapo-bombástico: se assustar, incha e explode — deixe-o no brejo', em: [4, 12], raio: 3.2 },
-    { texto: 'O anel no chão é o território do javali: contorne pela borda', em: [9, 11], raio: 3 },
+    { texto: 'O anel no chão é o território do javali: contorne pela borda', em: [8, 10], raio: 2.6 },
     { texto: 'Planta-carnívora morde quem passa colado. Chico (2): banana (K) distrai', em: [13, 5], raio: 2.6 },
   ],
 };

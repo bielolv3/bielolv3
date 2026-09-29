@@ -8,6 +8,9 @@
 //   {m:'hugo'|'chico'|'orlando'} troca de macaco
 //   {k:1, mira:[i,j]}  {l:1}  {j:1}  {f:1}   identidade / recurso / golpe / surto (mira vira para o tile)
 //   {esperar:s}   {lutar:raio}  (luta até não restar inimigo no raio)   {chefe:1} (luta com o chefe)
+//   Ato II: {ir, semPulo:true} (não pula degrau: empurra a tartaruga)  {ir, saltar:true} (pula já e usa o
+//   pulo duplo/planeio para vencer o vão)  {aguardar:'tartaruga', em:[i,j]} (espera ela parar na margem)
+//   {provocar:1} (a sala deve ficar em paz: falha se alguma fauna for provocada antes deste passo)
 import { createRequire } from 'module';
 import http from 'http';
 import fs from 'fs';
@@ -79,6 +82,56 @@ export const ROTAS = {
   ],
   // teste negativo: o Chico não deveria passar por cima do selo
   '4-neg-chico': [{ m: 'chico' }, { ir: [3, 4] }, { ir: [3, 8] }],
+
+  // ---- Ato II (salas 09-12, bioma Seiva). Nas rotas "paz" do projeto, `emPaz` confere
+  // que nenhuma fauna foi provocada (a sala ensina a não provocar).
+  // sala09: contorna o território do javali pela direita; banana na planta; sai
+  9: [
+    { ir: [14, 12] }, { ir: [15, 7] }, { m: 'chico' }, { ir: [13, 6] }, { k: 1, mira: [13, 2] },
+    { ir: [12, 4] }, { ir: [12, 2] }, { emPaz: 1 }, { ir: [12, 1] },
+  ],
+  // sala09 brigando: entra no território, o javali investe; o bot luta
+  '9-luta': [
+    { ir: [9, 10] }, { lutar: 6, limite: 60 }, { ir: [14, 6] }, { m: 'chico' }, { ir: [13, 6] }, { k: 1, mira: [13, 2] },
+    { ir: [12, 4] }, { ir: [12, 2] }, { ir: [12, 1] },
+  ],
+  // sala10: balsa até a margem norte; empurra a segunda tartaruga para o canal; atravessa nela
+  10: [
+    { ir: [5, 12] }, { aguardar: 'tartaruga', em: [5, 10], limite: 30 }, { ir: [5, 10], semPulo: true },
+    { aguardar: 'tartaruga', em: [5, 5], limite: 30 }, { ir: [5, 4], semPulo: true }, { ir: [8, 2] },
+    { ir: [9, 2], semPulo: true, limite: 6 }, { aguardar: 'tartaruga', em: [10, 2], limite: 30 }, { ir: [10, 2], semPulo: true },
+    { aguardar: 'tartaruga', em: [15, 2], limite: 30 }, { ir: [16, 2], semPulo: true }, { emPaz: 1 }, { ir: [18, 2] },
+  ],
+  // sala11: Chico pula os ninhos (pulo duplo); Orlando puxa a alavanca da ilha; banana na planta
+  11: [
+    { m: 'chico' }, { ir: [9, 12] }, { ir: [9, 11] }, { ir: [9, 10] }, { ir: [9, 7], saltar: true }, { ir: [9, 6] },
+    { ir: [10, 5] }, { ir: [10, 3] }, { k: 1, mira: [6, 3] }, { m: 'orlando' }, { ir: [12, 2] }, { k: 1, mira: [15, 2] },
+    { ir: [7, 4] }, { ir: [5, 4] }, { ir: [5, 2] }, { emPaz: 1 }, { ir: [3, 2] }, { ir: [2, 2] },
+  ],
+  // sala11 com o Orlando planando por cima dos ninhos
+  '11-orlando': [
+    { m: 'orlando' }, { ir: [9, 12] }, { ir: [9, 11] }, { ir: [9, 7], saltar: 'ninho' }, { ir: [9, 6] },
+    { ir: [12, 3] }, { ir: [12, 2] }, { k: 1, mira: [15, 2] }, { m: 'chico' }, { ir: [10, 3] }, { k: 1, mira: [6, 3] },
+    { ir: [7, 4] }, { ir: [5, 4] }, { ir: [5, 2] }, { emPaz: 1 }, { ir: [3, 2] }, { ir: [2, 2] },
+  ],
+  // sala11 pelo Hugo: pisa nos ovos e briga com as aranhas
+  '11-hugo': [
+    { ir: [9, 12] }, { ir: [9, 10] }, { ir: [9, 8] }, { lutar: 8, limite: 60 }, { ir: [9, 6] },
+    { ir: [10, 5] }, { m: 'orlando' }, { ir: [12, 2] }, { k: 1, mira: [15, 2] }, { m: 'hugo' },
+    { ir: [9, 3] }, { lutar: 3, limite: 30 }, { ir: [5, 4] }, { ir: [5, 2] }, { ir: [3, 2] }, { ir: [2, 2] },
+  ],
+  // sala12: atravessa a clareira pelas passagens, pega a Semente aos pés da Matriarca e sai
+  12: [
+    { ir: [12, 16] }, { ir: [12, 15] }, { ir: [12, 13] }, { ir: [5, 12] }, { ir: [5, 11] }, { ir: [5, 9] },
+    { ir: [12, 9] }, { ir: [12, 7] }, { ir: [12, 9] }, { ir: [20, 9] }, { ir: [24, 8] }, { ir: [24, 3] }, { emPaz: 1 }, { ir: [24, 1] },
+  ],
+  // sala12 provocando: pisa na raiz, aguenta a reação dela e sai
+  '12-provoca': [
+    { ir: [9, 15] }, { ir: [9, 14] }, { ir: [9, 13] }, { ir: [5, 12] }, { ir: [5, 11] }, { ir: [5, 9] },
+    { ir: [12, 9] }, { ir: [12, 7] }, { ir: [12, 9] }, { ir: [20, 9] }, { ir: [24, 8] }, { ir: [24, 3] }, { ir: [24, 1] },
+  ],
+  // sala12 lutando com ela até o fim
+  '12-luta': [{ ir: [12, 11] }, { ir: [12, 10] }, { chefe: 1, limite: 240 }, { ir: [12, 7] }, { ir: [20, 9] }, { ir: [24, 8] }, { ir: [24, 1] }],
 };
 
 // ---------------------------------------------------------------- bot (roda na página)
@@ -92,7 +145,7 @@ function instalarBot() {
   const DT = 1 / 60;
   const V = (x, z) => ({ x, z });
   const centro = ([i, j]) => V(i + 0.5, j + 0.5);
-  const tipoDe = (e) => !e ? 'queda' : e.ehChefe ? 'andador' : e.investida !== undefined ? 'bruto' : e.pontoPatrulha ? 'guardiao'
+  const tipoDe = (e) => !e ? 'queda' : e.especie ? e.especie : e.ehChefe ? 'andador' : e.investida !== undefined ? 'bruto' : e.pontoPatrulha ? 'guardiao'
     : e.viu !== undefined ? 'vigia' : e.recargaTele !== undefined ? 'acolito' : e.anelRaio ? 'torre' : e.canal !== undefined ? 'construtor'
     : e.pesado ? 'sentinela' : e.autor ? tipoDe(e.autor) + (e.raioMax !== undefined ? '~onda' : '~tiro') : '?';
   const inimigos = () => jogo.entidades.filter((e) => e.time === 'inimigo' && !e.removido);
@@ -137,6 +190,8 @@ function instalarBot() {
     offs.push(jogo.eventos.on('coleta', ({ tipo }) => { if (tipo === 'memoria') memorias++; }));
     let morreu = false;
     offs.push(jogo.eventos.on('derrota', () => { morreu = true; }));
+    const provocadas = [];
+    offs.push(jogo.eventos.on('alerta', (d) => { if (d?.fauna) provocadas.push(`${d.inimigo.especie}:${d.motivo}@${t.toFixed(1)}`); }));
     const dicasVistas = new Set();
     let t = 0, saiu = false, nanVisto = false;
     const segurar = new Set();
@@ -205,7 +260,12 @@ function instalarBot() {
       const ax = j.pos.x + ux * 0.42, az = j.pos.z + uz * 0.42;
       const hFrente = mapa.alturaEm(ax, az), vazioFrente = mapa.vazioEm(ax, az);
       const hAlvo = mapa.vazioEm(alvo.x, alvo.z) ? -9 : mapa.alturaEm(alvo.x, alvo.z);
-      if (j.noChao) {
+      // saltar:'ninho' = pula só na beirada do primeiro ninho à frente (quem plana/pula duplo passa por cima)
+      const beirada = opts.saltar !== 'ninho' || jogo.entidades.some((e) => e.ehNinho && Math.hypot(e.pos.x - j.pos.x, e.pos.z - j.pos.z) < 0.85 && (e.pos.x - j.pos.x) * ux + (e.pos.z - j.pos.z) * uz > 0);
+      if (opts.saltar && !opts._saltou && j.noChao && beirada) { opts._saltou = true; apertar.push('pulo'); return false; }
+      if (opts.saltar && !j.noChao && j.pulosRestantes > 0 && j.vel.y < 0.5) { segurar.delete('pulo'); apertar.push('pulo'); }
+      if (j.noChao && opts.semPulo) { /* só anda (empurra) */ }
+      else if (j.noChao) {
         if (hFrente > j.pos.y + 0.5 && hFrente < j.pos.y + 2.7 && !vazioFrente) apertar.push('pulo');
         else if (vazioFrente && opts.pular !== false && (opts.pular || hAlvo > j.pos.y - 3)) {
           const bx = j.pos.x + ux * 0.28, bz = j.pos.z + uz * 0.28;
@@ -272,6 +332,7 @@ function instalarBot() {
     function atacarChefe(j, w) {
       const d = j.distancia(w);
       const est = w.estado;
+      if (w.ehMatriarca) return atacarMatriarca(j, w, d, est);
       // pisão marcado: sai do círculo
       if (est === 'pisaoPrep' || est === 'pisaoAr') {
         const dx = j.pos.x - w.alvoPisao.x, dz = j.pos.z - w.alvoPisao.z, n = Math.hypot(dx, dz) || 1;
@@ -293,6 +354,27 @@ function instalarBot() {
       }
       const alcance = j.stats.alcance * 0.7 + w.raio + 0.2;
       if (j.atual === 'hugo' && d < 2.8 && j.recarga.identidade <= 0 && j.noChao && est === 'reposicionar') { olhar(j, w.pos); apertar.push('identidade'); eixo = { x: 0, y: 0 }; return; }
+      if (d > alcance - 0.1) { andar(j, w.pos, { pular: false, tol: 0 }); return; }
+      eixo = { x: 0, y: 0 }; olhar(j, w.pos);
+      if (j.recarga.golpe <= 0) apertar.push('golpe');
+    }
+
+    // Matriarca: sai da faixa do chicote, foge das nuvens de esporos, pula o pisão (defesa) e bate
+    function atacarMatriarca(j, w, d, est) {
+      const l = w.linhaAtual;
+      if (est === 'chicotePrep' && l && !l.fim) {
+        const rx = j.pos.x - l.ini.x, rz = j.pos.z - l.ini.z;
+        const ao = rx * l.dir.x + rz * l.dir.z, lat = rx * l.dir.z - rz * l.dir.x;
+        if (ao > -0.5 && ao < l.comp + 0.5 && Math.abs(lat) < l.largura + 0.9) {
+          const lado = lat >= 0 ? 1 : -1;
+          andar(j, V(j.pos.x + l.dir.z * lado * 2, j.pos.z - l.dir.x * lado * 2), { pular: false, tol: 0 });
+          return;
+        }
+        eixo = { x: 0, y: 0 }; return;
+      }
+      const nuvem = jogo.entidades.find((e) => e.bolhas && !e.removido && j.distancia(e) < e.raio + 0.9);
+      if (nuvem) { const dx = j.pos.x - nuvem.pos.x, dz = j.pos.z - nuvem.pos.z, n = Math.hypot(dx, dz) || 1; andar(j, V(j.pos.x + dx / n * 2, j.pos.z + dz / n * 2), { pular: false, tol: 0 }); return; }
+      const alcance = j.stats.alcance * 0.7 + w.raio + 0.2;
       if (d > alcance - 0.1) { andar(j, w.pos, { pular: false, tol: 0 }); return; }
       eixo = { x: 0, y: 0 }; olhar(j, w.pos);
       if (j.recarga.golpe <= 0) apertar.push('golpe');
@@ -327,6 +409,12 @@ function instalarBot() {
           else if (ta > (a.duracao ?? 0.6)) ok = true;
         } else if (a.esperar !== undefined) {
           if (ta >= a.esperar) ok = true;
+        } else if (a.aguardar) {
+          const tt = jogo.entidades.find((e) => e.ehTartaruga && e.i === a.em[0] && e.j === a.em[1] && !e.passo && (e.pausa ?? 0) > 0.6);
+          if (tt) ok = true;
+        } else if (a.emPaz) {
+          if (!paz && provocadas.length) { R.log.push('fauna provocada na rota em paz: ' + provocadas.join(', ')); R.pazQuebrada = true; }
+          ok = true;
         } else if (a.lutar !== undefined || a.chefe) {
           const raio = a.lutar ?? 99;
           const ar = a.area;
@@ -352,12 +440,13 @@ function instalarBot() {
     } catch (erro) { R.log.push('ERRO: ' + erro.message); }
     segurar.clear(); eixo = { x: 0, y: 0 };
     offs.forEach((f) => f());
-    R.ok = saiu;
+    R.ok = saiu && !R.pazQuebrada;
     R.tempo = +t.toFixed(1);
     R.dano = +R.dano.toFixed(1);
     R.inimigosVivos = inimigos().length;
     R.vidaFinal = jogo.jogador.vida;
     R.memorias = `${memorias}/${totalMem}`;
+    R.provocadas = provocadas.length;
     R.dicas = (sala.dicas ?? []).filter((d) => d.em).map((d) => (dicasVistas.has(d.texto) ? '+' : '-') + d.texto.slice(0, 28));
     const j = jogo.jogador;
     R.fim = `(${j.pos.x.toFixed(1)},${j.pos.z.toFixed(1)})`;
@@ -398,7 +487,7 @@ for (const s of salas) {
       const R = await pag.evaluate(({ s, rota, modo }) => window.__bot.rodar('sala' + String(parseInt(s)).padStart(2, '0'), rota, modo), { s, rota: ROTAS[s], modo });
       const negativo = s.includes('-neg');   // rota que NÃO deveria chegar à saída
       if (R.ok === negativo) falhas++;
-      console.log(`${R.ok === negativo ? (negativo ? 'ATALHO' : 'FALHA') : (negativo ? 'OK(bloq)' : 'OK  ')} sala${String(s).padStart(2, '0').padEnd(8)} ${modo.padEnd(4)} t=${String(R.tempo).padStart(5)}s dano=${R.dano} quedas=${R.quedas} mortes=${R.mortes} vida=${R.vidaFinal} mem=${R.memorias} inimigos ${R.inimigosVivos}/${R.inimigosTotal} fim=${R.fim}`);
+      console.log(`${R.ok === negativo ? (negativo ? 'ATALHO' : 'FALHA') : (negativo ? 'OK(bloq)' : 'OK  ')} sala${String(s).padStart(2, '0').padEnd(8)} ${modo.padEnd(4)} t=${String(R.tempo).padStart(5)}s dano=${R.dano} quedas=${R.quedas} mortes=${R.mortes} vida=${R.vidaFinal} mem=${R.memorias} inimigos ${R.inimigosVivos}/${R.inimigosTotal}${R.provocadas ? ' provocadas=' + R.provocadas : ''} fim=${R.fim}`);
       if (R.dano) console.log('      dano por fonte: ' + JSON.stringify(R.fontes));
       for (const l of R.log) console.log('      ' + l);
       if (r === 0 && modo === modos[0]) console.log('      dicas: ' + R.dicas.join(' | '));

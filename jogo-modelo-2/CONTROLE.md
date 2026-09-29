@@ -22,9 +22,15 @@ e é anotado aqui a cada fase. Parada para fechamento: **US$ 70** (sobram ~US$ 9
 | C · Interface e salas | `src/ui/*`, `src/audio/*`, `src/levels/*`, `index.html`, `src/main.js` |
 | Principal | `src/core/jogo.js`, `input.js`, `jogador.js`, integração, commits |
 
+## Publicação
+
+Jogo publicado em https://claude.ai/artifact/A3hwdNjWcVuUuV6YmT9L3P (privado; compartilhar pelo menu Share).
+Para republicar: `npm run build && node scripts/pagina-artifact.mjs` e publicar `dist/artifact.html` com `assets/` e `sprites/`.
+
 ## Registro
 
 | Quando | Fase | Custo acumulado | Observação |
 |---|---|---|---|
 | 29/09 | 0 | US$ 0,96 | Leitura do Códice, escolha do estilo |
 | 29/09 | 1 | ~US$ 2 | Esqueleto rodando: sala 1, Hugo andando/pulando, Guardião |
+| 29/09 | 2 | US$ 17,45 | Frentes A, B, C integradas; 7 salas; publicado: https://claude.ai/artifact/A3hwdNjWcVuUuV6YmT9L3P |

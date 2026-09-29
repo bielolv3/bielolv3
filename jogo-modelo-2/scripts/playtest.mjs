@@ -39,8 +39,19 @@ export const ROTAS = {
     { ir: [6, 10] }, { lutar: 6 }, { ir: [11, 7] }, { k: 1 }, { ir: [11, 5] }, { ir: [12, 2] },
   ],
   5: [
-    { ir: [5, 5] }, { ir: [8, 5] }, { lutar: 6 }, { ir: [12, 6] }, { lutar: 7 }, { ir: [14, 4] }, { lutar: 4 },
-    { m: 'orlando' }, { ir: [15, 3] }, { k: 1, mira: [15, 1] }, { ir: [17, 4] }, { ir: [19, 2] },
+    { ir: [5, 5] }, { ir: [8, 5] }, { lutar: 6 }, { ir: [10, 6] }, { lutar: 7 }, { ir: [13, 4] }, { lutar: 4 },
+    { m: 'orlando' }, { ir: [14, 3] }, { k: 1, mira: [14, 1] }, { ir: [17, 4] }, { ir: [19, 2] },
+  ],
+  6: [
+    { ir: [3, 12] }, { k: 1 }, { ir: [3, 10] }, { ir: [3, 6] }, { ir: [4, 3] }, { m: 'orlando' },
+    { ir: [10, 3], pular: true }, { lutar: 9, area: [9, 1, 15, 10] }, { ir: [13, 7] }, { k: 1, mira: [13, 8] },
+    { ir: [15, 5] }, { ir: [17, 5] }, { lutar: 9, area: [17, 1, 20, 12] }, { m: 'chico' }, { ir: [18, 12] }, { ir: [18, 14] }, { ir: [18, 16] },
+  ],
+  // variante: limpa o pátio inteiro (Bruto incluso) antes de sair
+  '5-tudo': [
+    { ir: [5, 5] }, { ir: [8, 5] }, { lutar: 6 }, { ir: [10, 6] }, { lutar: 7 }, { ir: [13, 4] }, { lutar: 4 },
+    { ir: [14, 10] }, { lutar: 30, limite: 90 },
+    { m: 'orlando' }, { ir: [14, 3] }, { k: 1, mira: [14, 1] }, { ir: [17, 4] }, { ir: [19, 2] },
   ],
   // teste negativo: o Chico não deveria passar por cima do selo
   '4-chico': [{ m: 'chico' }, { ir: [3, 4] }, { ir: [3, 8] }],
@@ -90,7 +101,7 @@ function instalarBot() {
     let morreu = false;
     offs.push(jogo.eventos.on('derrota', () => { morreu = true; }));
     const dicasVistas = new Set();
-    let t = 0, saiu = false;
+    let t = 0, saiu = false, nanVisto = false;
     const segurar = new Set();
     let eixo = { x: 0, y: 0 };
     let apertar = [];
@@ -115,6 +126,11 @@ function instalarBot() {
         jogo.ui?.irPara?.('jogando');
       }
       if (jogo._trocando) saiu = true;
+      if (!nanVisto) for (const e of jogo.entidades) if (Number.isNaN(e.pos.x + e.pos.y + e.pos.z)) {
+        nanVisto = true;
+        R.log.push(`NaN na posição de ${tipoDe(e)} (${e.time}) em t=${t.toFixed(2)} vel=${JSON.stringify(e.vel)}`);
+        if (e === j) { e.pos.copy(e.ultimoChao ?? jogo.inicio); e.vel.set(0, 0, 0); }
+      }
     }
 
     // ---- camada de defesa (vale durante qualquer ação, com inimigos ativos)
@@ -184,8 +200,18 @@ function instalarBot() {
       if (alvo.ehChefe) return atacarChefe(j, alvo);
       if (alvo.investida !== undefined && (alvo.preparo > 0 || alvo.investida > 0)) {
         // sai da linha da investida
-        const dx = j.pos.x - alvo.pos.x, dz = j.pos.z - alvo.pos.z, n = Math.hypot(dx, dz) || 1;
-        return andar(j, V(j.pos.x - dz / n * 2, j.pos.z + dx / n * 2), { pular: false }), undefined;
+        const di = alvo.dirInvestida, px = -di.z, pz = di.x;
+        // só foge se estiver na linha da investida; escolhe o lado com chão livre
+        const rx = j.pos.x - alvo.pos.x, rz = j.pos.z - alvo.pos.z;
+        const lateral = rx * px + rz * pz, frente = rx * di.x + rz * di.z;
+        if (frente < -0.5 || Math.abs(lateral) > 1.6) { eixo = { x: 0, y: 0 }; return; }
+        // Hugo: apara a investida com a Guarda no último instante (parry atordoa o Bruto)
+        if (j.atual === 'hugo' && alvo.investida > 0 && Math.abs(lateral) < 1.2 && frente < 2.4 && j.noChao) { segurar.add('recurso'); eixo = { x: 0, y: 0 }; return; }
+        const livre = (sx) => { const h = jogo.mapa.alturaEm(j.pos.x + px * sx * 1.5, j.pos.z + pz * sx * 1.5); return h <= j.pos.y + 0.5 && !jogo.mapa.vazioEm(j.pos.x + px * sx * 1.5, j.pos.z + pz * sx * 1.5); };
+        let lado = lateral >= 0 ? 1 : -1;
+        if (!livre(lado)) lado = -lado;
+        andar(j, V(j.pos.x + px * lado * 2, j.pos.z + pz * lado * 2), { pular: false, tol: 0 });
+        return;
       }
       if (j.atual === 'hugo' && d < 2.2 && j.recarga.identidade <= 0 && j.noChao && alvo.atordoado <= 0.2) {
         olhar(j, alvo.pos); apertar.push('identidade'); eixo = { x: 0, y: 0 }; return;
@@ -252,16 +278,18 @@ function instalarBot() {
           else if (andar(j, alvo, a) && j.noChao) ok = true;
         } else if (a.m) {
           if (fase === 0) { apertar.push(a.m); fase = 1; } else if (j.atual === a.m) ok = true;
-          else if (ta > 0.5) { apertar.push(a.m); }
+          else if (ta % 0.3 < DT) { apertar.push(a.m); }
         } else if (a.k || a.l || a.j || a.f) {
           if (a.mira) olhar(j, centro(a.mira));
-          if (fase === 0) { apertar.push(a.k ? 'identidade' : a.l ? 'recurso' : a.j ? 'golpe' : 'surto'); fase = 1; }
+          const pronto = a.k ? j.recarga.identidade <= 0 : a.j ? j.recarga.golpe <= 0 : true;
+          if (fase === 0 && pronto && ta > 0.05) { apertar.push(a.k ? 'identidade' : a.l ? 'recurso' : a.j ? 'golpe' : 'surto'); fase = 1; ta = 0; }
           else if (ta > (a.duracao ?? 0.6)) ok = true;
         } else if (a.esperar !== undefined) {
           if (ta >= a.esperar) ok = true;
         } else if (a.lutar !== undefined || a.chefe) {
           const raio = a.lutar ?? 99;
-          const alvos = inimigos().filter((e) => j.distancia(e) < raio)
+          const ar = a.area;
+          const alvos = inimigos().filter((e) => j.distancia(e) < raio && (!ar || (e.pos.x >= ar[0] && e.pos.z >= ar[1] && e.pos.x < ar[2] + 1 && e.pos.z < ar[3] + 1)))
             .sort((p, q) => (q.ehChefe ? 1 : 0) - (p.ehChefe ? 1 : 0) || j.distancia(p) - j.distancia(q));
           if (paz || !alvos.length) ok = true;
           else if (def !== 'guarda') atacar(j, a.chefe ? (alvos.find((e) => e.ehChefe) ?? alvos[0]) : alvos[0]);

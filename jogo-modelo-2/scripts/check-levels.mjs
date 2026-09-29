@@ -97,8 +97,10 @@ function checar(sala, idx) {
   const tipo = (i, j) => (i < 0 || j < 0 || i >= larg || j >= alt) ? TIPOS_CHAO[' '] : TIPOS_CHAO[chao[j][i]];
   const letra = (i, j) => coisas[j]?.[i] ?? ' ';
   const pisavel = (i, j) => { const t = tipo(i, j); return !t.solido && !t.vazio; };
-  // modo "real": paredes e colunas são só blocos altos (como na física); porta = +3, selo = +2
-  const pisavelReal = (i, j) => !tipo(i, j).vazio;
+  // modo "real": selo = +2 e porta = +3 de altura, como na física. Com ATALHO_PAREDES=1,
+  // paredes e colunas também viram só blocos altos (a física atual não usa `solido`).
+  const paredesEscalaveis = !!process.env.ATALHO_PAREDES;
+  const pisavelReal = (i, j) => !tipo(i, j).vazio && (paredesEscalaveis || !tipo(i, j).solido);
   const alturaReal = (i, j, portasAbertas, time) => {
     let h = tipo(i, j).altura;
     const c = letra(i, j);

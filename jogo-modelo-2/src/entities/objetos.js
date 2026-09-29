@@ -103,7 +103,8 @@ export class Selo extends Entidade {
     this.quebrado = false;
     this.pos.y = jogo.mapa.tipo(this.i, this.j).altura;
     this.montarVisual();
-    jogo.mapa.bloquear(this.i, this.j, 2);
+    // +3 como a porta: com +2 o pulo duplo do Chico (+2,07) mais o degrau passava por cima
+    jogo.mapa.bloquear(this.i, this.j, 3);
   }
   montarVisual() {
     this.mat = new THREE.MeshLambertMaterial({ color: TEAL, emissive: 0x1a5559 });
@@ -130,7 +131,7 @@ export class Selo extends Entidade {
     if (!this.quebrado || ocupado) return false;
     this.quebrado = false;
     this.pilar.visible = true; this.entulho.visible = false;
-    this.jogo.mapa.bloquear(this.i, this.j, 2);
+    this.jogo.mapa.bloquear(this.i, this.j, 3);
     this.jogo.eventos.emitir('selo', { quebrado: false, selo: this });
     return true;
   }

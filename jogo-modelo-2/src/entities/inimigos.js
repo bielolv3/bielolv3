@@ -92,7 +92,7 @@ export class Inimigo extends Entidade {
 
   // colide com o cenário usando no máximo 0,4 de raio (os grandes não entalam em corredor)
   fisica(dt) {
-    const c = { pos: this.pos, vel: this.vel, raio: Math.min(this.raio, 0.4) };
+    const c = { pos: this.pos, vel: this.vel, raio: Math.min(this.raio, 0.4), noChao: this.noChao };
     moverCorpo(this.jogo.mapa, c, dt);
     this.noChao = c.noChao;
     this.caiu = c.caiu;

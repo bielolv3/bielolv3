@@ -10,6 +10,15 @@ function alturaMaxSob(mapa, x, z, r) {
   );
 }
 
+// altura para a colisão lateral: parede/coluna (`solido`) não se escala nem pulando
+// (senão o pulo duplo + degrau passa por cima e pula portas); só quem já está em pé
+// no topo anda por ele. O chão sob o corpo continua sendo alturaEm.
+function alturaLateral(mapa, x, z, corpo) {
+  const h = mapa.alturaEm(x, z);
+  if (!mapa.tipo(Math.floor(x), Math.floor(z)).solido) return h;
+  return corpo.noChao && corpo.pos.y >= h - 0.01 ? h : Infinity;
+}
+
 // move `corpo` ({pos, vel, raio, noChao}) um passo, resolvendo colisão eixo a eixo
 export function moverCorpo(mapa, corpo, dt) {
   const { pos, vel, raio } = corpo;
@@ -24,8 +33,8 @@ export function moverCorpo(mapa, corpo, dt) {
     pos[eixo] += passo;
     const s = passo > 0 ? raio : -raio;
     const chao = eixo === 'x'
-      ? Math.max(mapa.alturaEm(pos.x + s, pos.z - raio), mapa.alturaEm(pos.x + s, pos.z + raio))
-      : Math.max(mapa.alturaEm(pos.x - raio, pos.z + s), mapa.alturaEm(pos.x + raio, pos.z + s));
+      ? Math.max(alturaLateral(mapa, pos.x + s, pos.z - raio, corpo), alturaLateral(mapa, pos.x + s, pos.z + raio, corpo))
+      : Math.max(alturaLateral(mapa, pos.x - raio, pos.z + s, corpo), alturaLateral(mapa, pos.x + raio, pos.z + s, corpo));
     if (chao > pos.y + DEGRAU) { pos[eixo] = antes; vel[eixo] = 0; }
   }
 

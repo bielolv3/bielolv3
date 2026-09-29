@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { Entidade } from './entidade.js';
 import { DEGRAU, moverCorpo } from '../world/fisica.js';
 import { Projetil, Onda, controleExterno } from './projeteis.js';
-import { aplicarSpriteInimigo } from '../fx/sprites.js';
+import { aplicarSpriteInimigo, animarInimigo } from '../fx/sprites.js';
 
 // Legião Cinzenta (cinza-azulado) e Quanta (teal). Números do Códice.
 const COR_LEGIAO = 0x8b94a0;
@@ -134,8 +134,9 @@ export class Inimigo extends Entidade {
     this.sincronizar(dt);
   }
 
-  atualizarVisual() {
+  atualizarVisual(dt = 0) {
     if (!this.sprite) return;
+    animarInimigo(this, dt);   // quadros (só Guardião/Acólito têm; os outros ignoram)
     // tonto: balança; preparando: avermelha pulsando
     this.sprite.material.rotation = this.atordoado > 0 ? Math.sin(this.t * 14) * 0.25 : 0;
     const pulso = this.preparo > 0 ? 0.5 + 0.5 * Math.sin(this.t * 30) : 0;

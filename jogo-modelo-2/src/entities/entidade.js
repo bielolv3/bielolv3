@@ -189,6 +189,8 @@ export class Entidade {
     if (!this.animado || dt <= 0) return;
     a.t += dt;
     const leve = this.pesado || this.ehChefe ? 0.5 : 1;
+    // com animação quadro a quadro, a deformação só tempera (squash leve, sem bob nem respiração)
+    const q = this.quadros ? 0.45 : 1, semQuadros = this.quadros ? 0 : 1;
     const noChao = this.noChao || this.voa;
     const cam = this.jogo.camera.cam;
     const direitaTela = _dirTela.setFromMatrixColumn(cam.matrixWorld, 0);
@@ -197,12 +199,12 @@ export class Entidade {
 
     // mola do squash & stretch (sq > 0 estica, < 0 achata)
     if (!this.voa) {
-      if (a.noChao && !this.noChao && this.vel.y > 2) { a.sq = -0.22 * leve; a.sqVel = 9 * leve; }       // saiu do chão: antecipação -> esticada
-      else if (!a.noChao && this.noChao && a.vy < -2) { a.sqVel -= Math.min(7, -a.vy * 0.7) * leve; }   // aterrissou
+      if (a.noChao && !this.noChao && this.vel.y > 2) { a.sq = -0.22 * leve * q; a.sqVel = 9 * leve * q; }       // saiu do chão: antecipação -> esticada
+      else if (!a.noChao && this.noChao && a.vy < -2) { a.sqVel -= Math.min(7, -a.vy * 0.7) * leve * q; }   // aterrissou
     }
     a.noChao = this.noChao; a.vy = this.vel.y;
     let alvoSq = 0;
-    if (!noChao) alvoSq = THREE.MathUtils.clamp(Math.abs(this.vel.y) * 0.018, 0, 0.14) * leve;
+    if (!noChao) alvoSq = THREE.MathUtils.clamp(Math.abs(this.vel.y) * 0.018, 0, 0.14) * leve * q;
     a.sqVel += ((alvoSq - a.sq) * 260 - a.sqVel * 16) * dt;
     a.sq += a.sqVel * dt;
     a.sq = THREE.MathUtils.clamp(a.sq, -0.35, 0.35);
@@ -212,19 +214,19 @@ export class Entidade {
     a.andar = amortecer(a.andar, noChao && h > 0.4 && this.atordoado <= 0 ? Math.min(1, h / 3) : 0, 10, dt);
     if (noChao) a.fase += dt * (4 + h * 2.2);
     const passo = Math.abs(Math.sin(a.fase));
-    dy += passo * 0.07 * a.andar * leve;
-    sy += (passo - 0.6) * 0.07 * a.andar * leve;
+    dy += passo * 0.07 * a.andar * leve * semQuadros;
+    sy += (passo - 0.6) * 0.07 * a.andar * leve * semQuadros;
     // respiração parada
     const resp = Math.sin(a.t * 2.3) * 0.022 * (1 - a.andar) * (noChao ? 1 : 0);
-    sy += resp * leve;
+    sy += resp * leve * semQuadros;
     // voadores flutuam
     if (this.voa) dy += Math.sin(a.t * 3) * 0.05;
 
     // inclinação na direção do movimento (e para trás quando apanha)
-    let alvoInc = THREE.MathUtils.clamp(vTelaX * 0.03, -0.16, 0.16) * (noChao ? 1 : 0.5);
+    let alvoInc = THREE.MathUtils.clamp(vTelaX * 0.03, -0.16, 0.16) * (noChao ? 1 : 0.5) * q * q;
     a.golpeado = Math.max(0, a.golpeado - dt);
     const g = a.golpeado / 0.22;
-    if (g > 0) { alvoInc += a.dirGolpe * 0.25 * g; sy -= 0.12 * g * leve; }
+    if (g > 0) { alvoInc += a.dirGolpe * 0.25 * g * q; sy -= 0.12 * g * leve * q; }
     a.inclina = amortecer(a.inclina, alvoInc, 16, dt);
 
     // golpe: avanço curto e esticada horizontal
@@ -233,10 +235,10 @@ export class Entidade {
       a.golpe = Math.max(0, a.golpe - dt / 0.2);
       const k = Math.sin(a.golpe * Math.PI) * (a.golpe > 0.6 ? 1 : 0.7);
       const lado = a.ladoGolpe ?? 1;
-      dx = lado * 0.14 * k;
-      sxGolpe = 1 + 0.14 * k;
-      sy -= 0.07 * k;
-      inc += lado * 0.1 * k;
+      dx = lado * 0.14 * k * q;
+      sxGolpe = 1 + 0.14 * k * semQuadros;
+      sy -= 0.07 * k * semQuadros;
+      inc += lado * 0.1 * k * semQuadros;
     }
 
     const sx = (1 / Math.sqrt(Math.max(0.5, sy))) * sxGolpe;

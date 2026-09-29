@@ -136,6 +136,132 @@ const DESENHOS = {
   }],
 };
 
+// ---------------------------------------------------------------- humanoides animados
+// Guardião e Acólito ganham quadros (andar / preparo / golpe) desenhados pelo mesmo
+// esqueleto simples dos macacos (src/fx/macacos.js): pose -> partes -> contorno.
+function guardiaoPose(t, p = {}) {
+  const by = p.by ?? 0, [a, b] = p.pes ?? [[0, 0], [0, 0]], sw = p.braco ?? 0;
+  const perna = (x, [dx, lev]) => { const yT = 29 + by; t.re(x + dx, yT, 4, 39 - lev - yT + 1, ACO, 1); t.re(x + dx - 1, 38 - lev, 5, 3, ACO, 0); };
+  perna(9, a); perna(15, b);
+  t.re(7, 15 + by, 14, 15, ACO, 2);                                            // tronco
+  t.el(14, 19 + by, 5, 4, ACO); t.re(8, 27 + by, 12, 2, ACO, 1);               // peitoral e cinto
+  t.re(3, 18 + by + sw, 4, 10, ACO, 2);                                         // braço de trás
+  t.el(6, 16 + by, 4, 3, ACO); t.el(22, 16 + by, 4, 3, ACO);                   // ombreiras
+  t.el(14, 9 + by, 5.5, 6, ACO);                                               // elmo
+  const olho = p.aviso ? [BRASA[1], BRASA[2], BRASA[3]] : [BRASA[0], BRASA[1], BRASA[2]];
+  t.re(10, 9 + by, 9, 2, olho, 1); t.set(14, 9 + by, BRASA[3]); t.set(15, 9 + by, BRASA[3]);
+  const haste = (x0, y0, x1, y1) => { t.linha(x0, y0, x1, y1, ACO[1]); t.linha(x0 + 1, y0, x1 + 1, y1, ACO[2]); };
+  if (p.alabarda === 'alto') {           // preparo: alabarda erguida para trás
+    t.re(21, 13 + by, 4, 8, ACO, 2);
+    haste(17, 38, 31, 2 + by); t.el(31, 3 + by, 3, 3.5, ACO); t.set(31, 2 + by, BRASA[2]);
+  } else if (p.alabarda === 'golpe') {   // golpe: lâmina descendo à frente
+    t.re(21, 19 + by, 9, 4, ACO, 2);
+    haste(16, 14 + by, 41, 33); t.el(40, 32, 3.5, 2.5, ACO); t.set(41, 32, BRASA[2]); t.set(42, 33, BRASA[3]);
+  } else {
+    t.re(21, 18 + by - sw, 4, 10, ACO, 2);                                     // braço da frente
+    haste(26, 2 + by - sw, 26, 40 - sw); t.el(26.5, 4 + by - sw, 2.5, 4, ACO); t.set(26, 3 + by - sw, BRASA[2]);
+  }
+}
+
+function acolitoPose(t, p = {}) {
+  const by = p.by ?? 0, passo = p.passo ?? 0;
+  for (let y = 12 + by; y < 42; y++) {
+    const m = 5 + (y - 12 - by) * 0.22 + (y > 38 ? passo * 0.5 : 0);
+    const cx = 11 + (y > 36 ? passo : 0);
+    for (let x = Math.round(cx - m); x <= Math.round(cx + m); x++) t.set(x, y, MANTO[x < cx - m + 2 ? 3 : x > cx + m - 2 ? 1 : ((y - by) % 7 === 0 ? 1 : 2)]);
+  }
+  if (passo) t.re(passo > 0 ? 13 : 6, 41, 3, 2, ['#15120d', '#2a2014', '#3e2f1c'], 1);   // pé aparecendo sob o manto
+  t.re(6, 26 + by, 12, 2, [QUANTA[0], QUANTA[1], QUANTA[2]], 1);            // faixa teal
+  t.el(11, 9 + by, 5.5, 6, MANTO);                                            // capuz
+  t.el(11, 10.5 + by, 3.2, 3.5, ['#0c0b09', '#15120d', '#1d190f']);
+  const olho = p.brilho ? QUANTA[4] : QUANTA[3];
+  t.set(10, 10 + by, olho); t.set(13, 10 + by, olho);
+  if (p.conjura) {                                                            // cajado erguido, orbe carregando
+    t.el(17, 17 + by, 2.5, 3, MANTO);                                         // manga erguida
+    t.linha(19, 3, 19, 36, MANTO[1]); t.linha(20, 3, 20, 36, MANTO[2]);
+    const r = p.brilho ? 3.4 : 2.9;
+    t.el(19.5, 3.2, r, r, QUANTA); t.set(19, 3, QUANTA[4]); t.set(20, 2, QUANTA[4]);
+  } else {
+    t.linha(20, 6 + by, 20, 42, MANTO[1]);                                    // cajado
+    t.el(20, 4 + by, 2.6, 2.6, QUANTA); t.set(20, 4 + by, QUANTA[4]);
+  }
+}
+
+// tipo -> [largura, altura, centroX (px), { animação: [poses] }, desenho(t, pose)]
+const ANIMADOS = {
+  guardiao: [44, 42, 15, {
+    andar: [{}, { by: -1, pes: [[-1, 1], [1, 0]], braco: 1 }, {}, { by: -1, pes: [[1, 0], [-1, 1]], braco: -1 }],
+    preparo: [{ alabarda: 'alto', aviso: true, by: 1 }],
+    golpe: [{ alabarda: 'golpe', aviso: true, by: 1, pes: [[2, 0], [-1, 0]] }],
+  }, guardiaoPose],
+  acolito: [24, 44, 12, {
+    andar: [{}, { by: -1, passo: -1 }, {}, { by: -1, passo: 1 }],
+    preparo: [{ conjura: true }, { conjura: true, brilho: true }],
+  }, acolitoPose],
+};
+DESENHOS.guardiao[2] = (t) => guardiaoPose(t);
+DESENHOS.acolito[2] = (t) => acolitoPose(t);
+
+const cacheAnim = new Map();
+function faixaAnimada(tipo) {
+  if (cacheAnim.has(tipo)) return cacheAnim.get(tipo);
+  const [w, h, cx, anims, desenho] = ANIMADOS[tipo];
+  const lista = [], indice = {};
+  for (const [an, ps] of Object.entries(anims)) ps.forEach((p) => { (indice[an] ??= []).push(lista.length); lista.push(p); });
+  const c = document.createElement('canvas');
+  c.width = w * lista.length; c.height = h;
+  const g = c.getContext('2d');
+  lista.forEach((p, k) => { const t = new Tela(w, h); desenho(t, p); t.contorno(); g.drawImage(t.canvas(), k * w, 0); });
+  const f = { canvas: c, w, h, cx, n: lista.length, indice };
+  cacheAnim.set(tipo, f);
+  return f;
+}
+
+// faixas dos humanoides animados (para a folha de contato em fx/macacos.js)
+export function faixasHumanoides() { return Object.keys(ANIMADOS).map((tipo) => ({ tipo, ...faixaAnimada(tipo) })); }
+
+// Sprite animado: textura própria (clone que compartilha a imagem) para trocar o quadro.
+function criarSpriteAnimado(ent, tipo, escala) {
+  const f = faixaAnimada(tipo);
+  if (!f.tex) {
+    f.tex = new THREE.CanvasTexture(f.canvas);
+    f.tex.magFilter = THREE.NearestFilter; f.tex.minFilter = THREE.NearestFilter; f.tex.generateMipmaps = false;
+    f.tex.colorSpace = THREE.SRGBColorSpace;
+  }
+  const tex = f.tex.clone();
+  tex.repeat.set(1 / f.n, 1);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, alphaTest: 0.5 }));
+  s.center.set(f.cx / f.w, 0);
+  s.scale.set(f.w / 32 * escala, f.h / 32 * escala, 1);
+  ent._animI = { f, tex, fase: 0, t: 0 };
+  ent.quadros = true;   // Entidade.animarSprite atenua a deformação procedural
+  return s;
+}
+
+const _dir = new THREE.Vector3();
+// Escolhe o quadro do inimigo animado: golpe > preparo > andar (passo pela distância).
+// Chamado por Inimigo.atualizarVisual. Vira o sprite para o lado do jogador ao atacar.
+export function animarInimigo(ent, dt) {
+  const A = ent._animI, s = ent.sprite;
+  if (!A || !s) return;
+  A.t += dt;
+  const { f } = A;
+  const h = Math.hypot(ent.vel.x, ent.vel.z);
+  let an = 'andar', i = 0;
+  if ((ent._anim?.golpe ?? 0) > 0 && f.indice.golpe) an = 'golpe';
+  else if (ent.preparo > 0 && ent.atordoado <= 0) { an = 'preparo'; i = Math.floor(A.t * 8); }
+  else if (h > 0.25 && ent.noChao !== false) { A.fase += h * dt / 1.1; i = Math.floor(A.fase * 4); }
+  const lst = f.indice[an] ?? f.indice.andar;
+  A.tex.offset.x = lst[i % lst.length] / f.n;
+  // lado: para onde anda ou, atacando, para o jogador
+  const cam = ent.jogo.camera?.cam, j = ent.jogo.jogador;
+  if (!cam) return;
+  const r = _dir.setFromMatrixColumn(cam.matrixWorld, 0);
+  let lado = ent.vel.x * r.x + ent.vel.z * r.z;
+  if ((an !== 'andar' || h < 0.25) && j) lado = (j.pos.x - ent.pos.x) * r.x + (j.pos.z - ent.pos.z) * r.z;
+  if (Math.abs(lado) > 0.15) s.scale.x = Math.abs(s.scale.x) * (lado < 0 ? -1 : 1);
+}
+
 // tamanho de mundo (largura, altura) = pixels / 32
 const cache = new Map();
 export function texturaInimigo(tipo) {
@@ -166,7 +292,7 @@ export function criarSpriteInimigo(tipo, escala = 1) {
 
 export function aplicarSpriteInimigo(ent, tipo, escala = 1) {
   if (ent.sprite) ent.objeto.remove(ent.sprite);
-  ent.sprite = criarSpriteInimigo(tipo, escala);
+  ent.sprite = ANIMADOS[tipo] ? criarSpriteAnimado(ent, tipo, escala) : criarSpriteInimigo(tipo, escala);
   ent.objeto.add(ent.sprite);
   return ent.sprite;
 }

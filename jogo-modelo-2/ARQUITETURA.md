@@ -77,6 +77,21 @@ src/
 3. Antes de terminar: `npx vite build` sem erro e um screenshot conferido.
 4. Português nos nomes e comentários, como no resto do código.
 
+## Macacos quadro a quadro
+
+Hugo, Chico e Orlando (normal e Surto) são desenhados por código em `src/fx/macacos.js`, na
+mesma densidade dos tiles (32 px = 1 unidade), com contorno de tinta de 1 px. Cada quadro sai de
+um esqueleto simples (pose -> tronco, cabeça, braços e pernas com IK de dois ossos) e vai para
+um atlas `CanvasTexture` (células 80×64, pés em x=32): vistas 3/4 de frente e 3/4 de costas,
+cada uma com luz da esquerda e da direita; a esquerda da tela é espelho no shader.
+Animações: `parado, andar, correr, pulo, queda, pouso, golpe, identidade, dano, guarda,
+segurar, planar, rugido`. A máquina de estados fica em `Jogador.escolherQuadro` (vista pela
+direção relativa à câmera, luz pelo lado do sol na tela). Com `this.quadros = true` a
+deformação procedural de `Entidade.animarSprite` só tempera (squash leve, sem bob).
+Guardião e Acólito também têm quadros (`ANIMADOS` / `animarInimigo` em `fx/sprites.js`).
+Conferência: `node scripts/exportar-macacos.mjs` gera `referencias/folha-macacos.png` e os
+atlas em `referencias/macacos/`. Os PNGs de `public/sprites/` seguem como retratos do HUD.
+
 ## Relíquias
 
 "Relíquia não é objeto encantado. É memória tão densa que virou coisa." (Códice, Livro VIII)

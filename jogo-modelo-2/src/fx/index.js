@@ -165,7 +165,7 @@ export function instalarEfeitos(jogo) {
     const co = new THREE.Color(COR.osso); u.uCorFixa.value.set(co.r, co.g, co.b, 0.6);
     if (o) { u.uDeform.value.copy(o.uDeform.value); u.uInclina.value = o.uInclina.value; u.uEspelho.value = o.uEspelho.value; }
     const s = new THREE.Sprite(m);
-    s.center.set(0.5, 0);
+    s.center.copy(orig.center);
     s.scale.copy(orig.scale);
     s.position.copy(j.pos);
     s.renderOrder = 9;

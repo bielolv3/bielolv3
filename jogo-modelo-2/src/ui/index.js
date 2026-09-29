@@ -5,6 +5,7 @@ import { criarHud, lerRecursos } from './hud.js';
 import { criarTelas } from './telas.js';
 import { criarToque } from './toque.js';
 import { criarGamepad } from './gamepad.js';
+import { SALAS } from '../levels/index.js';
 
 export function instalarInterface(jogo) {
   const estilo = document.createElement('style');
@@ -22,6 +23,14 @@ export function instalarInterface(jogo) {
   const pularTitulo = navigator.webdriver || new URLSearchParams(location.search).has('jogar');
   let estado = pularTitulo ? 'jogando' : 'titulo';
   let quadros = 0;
+  let jaJogou = false;
+  const atualizarTitulo = () => {
+    const max = Math.min(SALAS.length - 1, jogo.progresso?.salaMax ?? 0);
+    const salas = SALAS.slice(0, max + 1).map((s, indice) => ({ indice, nome: s.nome ?? s.id ?? `Sala ${indice + 1}` }));
+    telas.atualizarTitulo(!!jogo.temProgresso, salas, max);
+  };
+  atualizarTitulo();
+  telas.rotuloNumeros(jogo.opcoes?.numerosDano !== false);
   if (estado === 'titulo') telas.mostrar('titulo');
 
   const pausar = (sim) => {
@@ -32,8 +41,16 @@ export function instalarInterface(jogo) {
 
   function irPara(novo) {
     estado = novo;
-    if (novo === 'jogando') { telas.esconder(); pausar(false); }
+    if (novo === 'titulo') atualizarTitulo();
+    if (novo === 'jogando') { telas.esconder(); pausar(false); jaJogou = true; }
     else { telas.mostrar(novo); pausar(true); }
+  }
+
+  // começa numa sala (Continuar / seleção): íris abre a partir do preto
+  function comecarEm(indice) {
+    jogo.irParaSala(indice);
+    irPara('jogando');
+    jogo.eventos.emitir('comecar', {});
   }
 
   function tentarDeNovo() {
@@ -45,7 +62,23 @@ export function instalarInterface(jogo) {
 
   function acionar(acao) {
     jogo.audio?.destravar?.();
-    if (acao === 'jogar') { irPara('jogando'); hud.reexibirTitulo(); jogo.eventos.emitir('comecar', {}); }
+    if (acao === 'jogar') {
+      // sala 1 já está montada atrás do título; vindo do menu, recomeça
+      if (jaJogou) { jogo.novoJogo(); irPara('jogando'); jogo.eventos.emitir('comecar', {}); return; }
+      irPara('jogando'); hud.reexibirTitulo(); jogo.eventos.emitir('comecar', {});
+    }
+    else if (acao === 'retomar') comecarEm(jogo.progresso?.salaMax ?? 0);
+    else if (acao === 'salas') telas.mostrar('salas');
+    else if (acao.startsWith('sala:')) comecarEm(+acao.slice(5));
+    else if (acao === 'novo') { if (jogo.temProgresso) telas.mostrar('confirmar'); else acionar('jogar'); }
+    else if (acao === 'confirmarNovo') { jogo.apagarProgresso(); jogo.novoJogo(); irPara('jogando'); jogo.eventos.emitir('comecar', {}); }
+    else if (acao === 'voltar') { atualizarTitulo(); telas.mostrar('titulo'); }
+    else if (acao === 'menu') irPara('titulo');
+    else if (acao === 'numeros') {
+      jogo.opcoes.numerosDano = jogo.opcoes.numerosDano === false;
+      jogo.salvarOpcoes?.();
+      telas.rotuloNumeros(jogo.opcoes.numerosDano);
+    }
     else if (acao === 'continuar') irPara('jogando');
     else if (acao === 'reiniciar' || acao === 'tentar') tentarDeNovo();
     else if (acao === 'som') jogo.audio?.alternarMudo();
@@ -65,6 +98,7 @@ export function instalarInterface(jogo) {
 
   addEventListener('keydown', (e) => {
     if (e.code === 'KeyM' && !e.repeat) jogo.audio?.alternarMudo();
+    if (e.code === 'Escape' && (telas.atual === 'salas' || telas.atual === 'confirmar')) { acionar('voltar'); return; }
     if ((e.code === 'Enter' || e.code === 'NumpadEnter') && telas.atual && telas.atual !== 'pausa') {
       e.preventDefault();
       telas.principal();

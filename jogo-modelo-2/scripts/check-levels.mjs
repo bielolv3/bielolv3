@@ -1,5 +1,8 @@
 // Valida as salas: grade retangular, 1 'P', >=1 'X', letras conhecidas e
 // caminho do P até um X (BFS por tile) com a física aproximada dos três macacos.
+// Ato II: água rasa ('w') é pisável; água funda ('o') é vão como o abismo, menos na
+// linha em que uma tartaruga-menor ('U') nada (balsa); raiz colossal ('t') é parede.
+// Também checa a travessia em paz: sem pisar em raiz viva ('z') nem em ninho ('N').
 // Uso: npm run check
 import { SALAS } from '../src/levels/index.js';
 import { TIPOS_CHAO, LEGENDA_COISAS, LEGENDA_DECO } from '../src/world/tiles.js';
@@ -88,14 +91,51 @@ function checar(sala, idx) {
   }
   if (erros.some((e) => e.startsWith(nome)) || ps.length !== 1) return;
 
-  // coisas não podem ficar em parede/vazio
+  // coisas não podem ficar em parede/vazio (a tartaruga-menor pode estar na água)
   for (const x of itens) {
     const t = TIPOS_CHAO[chao[x.j][x.i]];
-    if (t.solido || t.vazio) err(`'${x.c}' em ${x.i},${x.j} está sobre ${t.nome}`);
+    if ((t.solido || t.vazio) && !(x.c === 'U' && t.agua)) err(`'${x.c}' em ${x.i},${x.j} está sobre ${t.nome}`);
   }
 
-  const tipo = (i, j) => (i < 0 || j < 0 || i >= larg || j >= alt) ? TIPOS_CHAO[' '] : TIPOS_CHAO[chao[j][i]];
+  const tipoBase = (i, j) => (i < 0 || j < 0 || i >= larg || j >= alt) ? TIPOS_CHAO[' '] : TIPOS_CHAO[chao[j][i]];
   const letra = (i, j) => coisas[j]?.[i] ?? ' ';
+
+  // balsas: tiles de água por onde uma tartaruga-menor nada (mesma regra de fauna.js:
+  // na água, a linha que liga duas margens; em terra, empurrada para a água vizinha)
+  const naAgua = (i, j) => { const t = tipoBase(i, j); return !!(t.agua || t.lento); };
+  const margem = (i, j) => { const t = tipoBase(i, j); return !t.solido && !t.vazio; };
+  const balsa = new Set();
+  const linha = (i, j, di, dj) => { for (let k = 0; k < 40 && naAgua(i + di * k, j + dj * k); k++) balsa.add(`${i + di * k},${j + dj * k}`); };
+  for (const x of itens.filter((y) => y.c === 'U')) {
+    if (naAgua(x.i, x.j)) {
+      let melhor = null, nota = 0;
+      for (const [di, dj] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) {
+        let k = 0; while (k < 30 && naAgua(x.i + di * (k + 1), x.j + dj * (k + 1))) k++;
+        let v = 0; while (v < 30 && naAgua(x.i - di * (v + 1), x.j - dj * (v + 1))) v++;
+        const n = (margem(x.i + di * (k + 1), x.j + dj * (k + 1)) + margem(x.i - di * (v + 1), x.j - dj * (v + 1))) * 100 + k + v;
+        if (n > nota) { nota = n; melhor = [di, dj]; }
+      }
+      if (melhor) { linha(x.i, x.j, melhor[0], melhor[1]); linha(x.i, x.j, -melhor[0], -melhor[1]); }
+    } else {
+      for (const [di, dj] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) {
+        if (naAgua(x.i + di, x.j + dj) && margem(x.i - di, x.j - dj)) linha(x.i + di, x.j + dj, di, dj);
+      }
+    }
+  }
+  const BALSA = { nome: 'balsa', altura: 0.3 };
+  const BURACO = { nome: 'protegido', altura: -4, vazio: true };
+  let modoPaz = false;   // na busca em paz, raiz viva e ninho viram vão (só dá para pular por cima)
+  const tipo = (i, j) => {
+    if (balsa.has(`${i},${j}`)) return BALSA;
+    const t = tipoBase(i, j);
+    if (modoPaz && (t.protegido || letra(i, j) === 'N')) return BURACO;
+    return t;
+  };
+  // Agarrão do Orlando aciona alavanca a até 3 tiles em linha reta, por cima de vão
+  const alavancaAoAlcance = (i, j) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([di, dj]) => {
+    for (let k = 1; k <= 3; k++) { if (letra(i + di * k, j + dj * k) === 'L') return true; if (tipoBase(i + di * k, j + dj * k).solido) return false; }
+    return false;
+  });
   const pisavel = (i, j) => { const t = tipo(i, j); return !t.solido && !t.vazio; };
   // modo "real": selo e porta = +3 de altura, como na física (objetos.js). Paredes e colunas
   // (`solido`) não se escalam pelo lado (fisica.js, alturaLateral). ATALHO_PAREDES=1 simula a
@@ -150,7 +190,7 @@ function checar(sala, idx) {
             break;
           }
         }
-        if (letra(i, j) === 'L' && time.includes('orlando')) achouAlavanca = true;
+        if ((letra(i, j) === 'L' || alavancaAoAlcance(i, j)) && time.includes('orlando')) achouAlavanca = true;
       }
       if (achouSaida) return true;
       if (achouAlavanca && !portasAbertas) { portasAbertas = true; continue; }
@@ -171,7 +211,19 @@ function checar(sala, idx) {
       avisos.push(`${nome}: ATALHO — a física deixa chegar à saída sem ${n}, passando por ${pontos.slice(0, 4).join(' ')} (paredes/colunas/selos/portas escaláveis)`);
     }
   }
-  console.log(`ok  ${nome.padEnd(16)} ${larg}x${alt}  ${sala.nome ?? ''}${precisa.length ? '  · precisa: ' + precisa.join(', ') : ''}`);
+  // travessia em paz (só quando a sala tem raiz viva ou ninho)
+  let paz = '';
+  if (chao.some((l) => [...l].some((c) => TIPOS_CHAO[c]?.protegido)) || itens.some((x) => x.c === 'N')) {
+    modoPaz = true;
+    if (!busca(todos)) { avisos.push(`${nome}: não há travessia em paz (sem pisar em raiz viva/ninho)`); paz = '  · paz: NÃO'; }
+    else {
+      const pazPrecisa = todos.filter((n) => !busca(todos.filter((o) => o !== n)));
+      const quem = todos.filter((n) => busca([n]));
+      paz = `  · paz: ok (${quem.length ? 'sozinho: ' + quem.join('/') : 'precisa: ' + pazPrecisa.join(', ')})`;
+    }
+    modoPaz = false;
+  }
+  console.log(`ok  ${nome.padEnd(16)} ${larg}x${alt}  ${sala.nome ?? ''}${precisa.length ? '  · precisa: ' + precisa.join(', ') : ''}${paz}`);
 }
 
 SALAS.forEach(checar);

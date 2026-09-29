@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { atlasTiles, texturaSprite, LINHA, COLS, LINHAS, rngSemente } from './texturas.js';
+import { atlasTiles, texturaSprite, texturaAgua, LINHA, COLS, LINHAS, rngSemente } from './texturas.js';
 import { LEGENDA_DECO } from './tiles.js';
 import { fixo } from '../core/liberar.js';
 
@@ -25,6 +25,11 @@ const APARENCIA = {
   circuito: { topo: LINHA.circuitoTopo, lado: LINHA.circuitoLado },
   ornato: { topo: LINHA.ornatoTopo, lado: LINHA.pedraLado },
   coluna: { topo: LINHA.pedraTopo, lado: LINHA.pedraLado },
+  // Ato II (bioma Seiva)
+  terra: { topo: LINHA.terraTopo, lado: LINHA.terraLado },
+  raiz: { topo: LINHA.raizTopo, lado: LINHA.raizLado },
+  raizViva: { topo: LINHA.raizVivaTopo, lado: LINHA.raizLado },
+  aguaRasa: { topo: LINHA.aguaRasaTopo, lado: LINHA.terraLado },
 };
 const ALTA = 2;           // blocos a partir desta altura podem ser rebaixados
 const FUNDO_ABISMO = -3.5;
@@ -318,6 +323,44 @@ const matCristal = new THREE.MeshLambertMaterial({ color: 0x2c6c70, emissive: 0x
 const matPedestal = new THREE.MeshLambertMaterial({ color: 0x3a4646, flatShading: true });
 const matBronze = new THREE.MeshLambertMaterial({ color: 0x5a4020, flatShading: true });
 fixo(geoPedrinha, matPedrinha, geoCristal, matCristal, matPedestal, matBronze);   // reaproveitados entre salas
+// Ato II: raízes, cogumelos, vitória-régia, água funda
+const geoRaiz = new THREE.CylinderGeometry(0.09, 0.11, 1, 6);
+const matRaiz = new THREE.MeshLambertMaterial({ color: 0x5a3e22, flatShading: true });
+const geoPeCog = new THREE.CylinderGeometry(0.025, 0.035, 0.2, 5);
+const matPeCog = new THREE.MeshLambertMaterial({ color: 0xd8d0b0 });
+const geoChapeu = new THREE.SphereGeometry(0.09, 7, 4, 0, Math.PI * 2, 0, Math.PI / 2);
+const matChapeu = new THREE.MeshLambertMaterial({ color: 0x3a8a40, emissive: 0x7fe050, emissiveIntensity: 1.4, flatShading: true });
+const geoVitoria = new THREE.CircleGeometry(0.28, 9, 0.3, Math.PI * 2 - 0.6).rotateX(-Math.PI / 2);
+const matVitoria = new THREE.MeshLambertMaterial({ color: 0x4a7a2a, side: THREE.DoubleSide });
+fixo(geoRaiz, matRaiz, geoPeCog, matPeCog, geoChapeu, matChapeu, geoVitoria, matVitoria);
+const NIVEL_AGUA = -0.3;   // superfície da água funda
+// altura local da água para deco (vitória-régia): água funda boia em NIVEL_AGUA, rasa no próprio piso
+function t_agua(ctx, x, z) { const t = ctx.mapa.tipo(Math.floor(x), Math.floor(z)); return (t.agua ? NIVEL_AGUA : 0) + 0.03; }
+
+// superfície da água funda: um quad por tile `agua` (vazio), textura rolando devagar
+function construirAgua(mapa) {
+  const pos = [], uv = [], idx = [];
+  for (let j = 0; j < mapa.alt; j++) for (let i = 0; i < mapa.larg; i++) {
+    if (!mapa.tipo(i, j).agua) continue;
+    const b = pos.length / 3;
+    pos.push(i, NIVEL_AGUA, j, i + 1, NIVEL_AGUA, j, i + 1, NIVEL_AGUA, j + 1, i, NIVEL_AGUA, j + 1);
+    uv.push(i, -j, i + 1, -j, i + 1, -j - 1, i, -j - 1);
+    idx.push(b, b + 2, b + 1, b, b + 3, b + 2);
+  }
+  if (!pos.length) return null;
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(pos.map((_, k) => (k % 3 === 1 ? 1 : 0)), 3));
+  geo.setIndex(idx);
+  const tex = texturaAgua();
+  const mat = new THREE.MeshLambertMaterial({ map: tex, emissive: 0x0c2a28, transparent: true, opacity: 0.93 });
+  const m = new THREE.Mesh(geo, mat);
+  m.receiveShadow = true;
+  m.name = 'agua';
+  animaveis.push((dt, t) => { tex.offset.set(Math.sin(t * 0.3) * 0.08, t * 0.05); });
+  return m;
+}
 
 function brilho(cor, tam) {
   const s = spriteDeco('brilho', tam, { cor, profundidade: 0.8, aditivo: true });
@@ -341,6 +384,42 @@ function criarDeco(tipo, x, y, z, r, ctx) {
       // pendurado do topo da parede, na face virada para a câmera (o billboard resolve)
       const s = spriteDeco('cipo', 0.38, { profundidade: 0.9 });
       s.center.set(0.5, 1); s.scale.multiplyScalar(1.4); s.position.y = 0.02; g.add(s);
+      break;
+    }
+    // ---- Ato II (bioma Seiva)
+    case 'arbusto': g.add(spriteDeco('arbusto', 1 + r() * 0.4)); break;
+    case 'flores': g.add(spriteDeco('flores', 0.5 + r() * 0.2)); break;
+    case 'raizArco': {
+      // raiz retorcida que sai do chão e volta a entrar (arco de cilindros)
+      const n = 7, ang = r() * Math.PI, alt = 0.5 + r() * 0.5, comp = 0.8 + r() * 0.3;
+      for (let k = 0; k < n; k++) {
+        const t0 = k / n, t1 = (k + 1) / n;
+        const p0 = new THREE.Vector3((t0 - 0.5) * comp * 2, Math.sin(t0 * Math.PI) * alt, 0);
+        const p1 = new THREE.Vector3((t1 - 0.5) * comp * 2, Math.sin(t1 * Math.PI) * alt, 0);
+        const m = new THREE.Mesh(geoRaiz, matRaiz);
+        m.position.copy(p0).add(p1).multiplyScalar(0.5);
+        m.scale.set(1 - Math.abs(t0 - 0.5) * 0.6, p0.distanceTo(p1), 1 - Math.abs(t0 - 0.5) * 0.6);
+        m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), p1.clone().sub(p0).normalize());
+        m.castShadow = true; g.add(m);
+      }
+      g.rotation.y = ang;
+      break;
+    }
+    case 'cogumelo': {
+      for (let k = 0; k < 3 + (r() * 3 | 0); k++) {
+        const s = 0.5 + r() * 0.7, x = (r() - 0.5) * 0.6, z = (r() - 0.5) * 0.6;
+        const pe = new THREE.Mesh(geoPeCog, matPeCog); pe.position.set(x, 0.1 * s, z); pe.scale.setScalar(s); g.add(pe);
+        const ch = new THREE.Mesh(geoChapeu, matChapeu); ch.position.set(x, 0.2 * s, z); ch.scale.setScalar(s); g.add(ch);
+      }
+      const b = brilho(0x8ff060, 1.1); b.position.y = 0.25; g.add(b);
+      ctx.luzes.push({ g, cor: 0x9fe060, y: 0.5, forca: 1.8, prio: 1 });
+      break;
+    }
+    case 'vitoria': {
+      const m = new THREE.Mesh(geoVitoria, matVitoria);
+      m.position.set((r() - 0.5) * 0.3, t_agua(ctx, x, z), (r() - 0.5) * 0.3); m.rotation.y = r() * 6; m.scale.setScalar(0.7 + r() * 0.5);
+      g.add(m);
+      if (r() < 0.5) { const f = spriteDeco('flores', 0.3, { profundidade: 0.3 }); f.position.copy(m.position); g.add(f); }
       break;
     }
     case 'entulho':
@@ -398,7 +477,9 @@ export function construirDeco(mapa, terreno) {
   const grupo = new THREE.Group();
   grupo.name = 'deco';
   const sala = mapa.sala;
-  const ctx = { pedrinhas: [], luzes: [] };
+  const ctx = { pedrinhas: [], luzes: [], mapa };
+  const agua = construirAgua(mapa);
+  if (agua) grupo.add(agua);
   const ocupado = new Set(mapa.coisas.map((c) => `${c.i},${c.j}`));
   const explicitos = new Set();
 
@@ -432,6 +513,8 @@ export function construirDeco(mapa, terreno) {
         }
       } else if (!ocupado.has(k)) {
         if (t.nome === 'musgo') tipo = p < 0.5 ? 'capim' : p < 0.6 ? 'samambaia' : null;
+        else if (t.nome === 'terra' && vizinhoAlto(mapa, i, j, t.altura)) tipo = p < 0.22 ? 'samambaia' : p < 0.36 ? 'arbusto' : p < 0.5 ? 'capim' : null;
+        else if (t.nome === 'terra') tipo = p < 0.12 ? 'capim' : p < 0.16 ? 'flores' : p < 0.19 ? 'samambaia' : null;
         else if (t.nome === 'pedra' && vizinhoAlto(mapa, i, j, t.altura)) tipo = p < 0.13 ? 'samambaia' : p < 0.24 ? 'entulho' : p < 0.3 ? 'capim' : null;
         else if (t.nome === 'pedra') tipo = p < 0.025 ? 'entulho' : p < 0.05 ? 'capim' : null;
       }

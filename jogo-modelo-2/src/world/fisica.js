@@ -26,8 +26,11 @@ export function moverCorpo(mapa, corpo, dt) {
 
   // só a borda da frente do movimento bloqueia: quem ficou encostado/entalado num
   // bloco (beirada, selo reerguido, caixa) consegue sair andando para longe dele
+  // água rasa (tipo com `lento`): quem está com o pé nela anda mais devagar
+  const sob = mapa.tipo(Math.floor(pos.x), Math.floor(pos.z));
+  const lento = sob.lento && pos.y <= sob.altura + 0.05 ? sob.lento : 1;
   for (const eixo of ['x', 'z']) {
-    const passo = vel[eixo] * dt;
+    const passo = vel[eixo] * dt * lento;
     if (!passo) continue;
     const antes = pos[eixo];
     pos[eixo] += passo;

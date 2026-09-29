@@ -14,6 +14,7 @@ const MAPA_TECLAS = {
   KeyE: 'girarDir',
   Digit1: 'hugo', Digit2: 'chico', Digit3: 'orlando',
   KeyF: 'surto',
+  KeyR: 'reliquia', KeyU: 'usarReliquia',
   Escape: 'pausa',
 };
 

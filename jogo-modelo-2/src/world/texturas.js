@@ -9,8 +9,10 @@ export const COLS = 4;
 export const LINHA = {
   pedraTopo: 0, pedraLado: 1, musgoTopo: 2, paredeTopo: 3, paredeLado: 4, paredeCornija: 5,
   circuitoTopo: 6, circuitoLado: 7, ornatoTopo: 8, colunaLado: 9, rocha: 10, colunaTopo: 11,
+  // Ato II (bioma Seiva)
+  terraTopo: 12, terraLado: 13, raizTopo: 14, raizLado: 15, raizVivaTopo: 16, aguaRasaTopo: 17,
 };
-export const LINHAS = 12;
+export const LINHAS = 18;
 
 // ---------- utilidades ----------
 export function rngSemente(s) {
@@ -197,11 +199,110 @@ function rocha(g, r, v) {
 
 function colunaTopo(g, r, v) { pedraTopo(g, r, 3); }
 
+// ---------- Ato II: bioma Seiva (terra, raízes colossais, raiz viva, água rasa) ----------
+const TERRA = ['#1e160e', '#2e2216', '#40301e', '#553f27', '#6a5031', '#80623c', '#977548'];
+const CASCA = ['#1a120b', '#2a1d12', '#3d2a19', '#523922', '#684a2c', '#7f5d38', '#977247'];
+const SEIVA = ['#1c3a1a', '#2c5a24', '#4a8a30', '#7cc048', '#c8f080'];
+const AGUA = ['#10262a', '#173a3c', '#1f4d4c', '#2b6560', '#3f8078', '#66a898', '#a8d8c0'];
+
+function terraTopo(g, r, v) {
+  const n = ruido(r, 4), n2 = ruido(r, 8);
+  for (let y = 0; y < CEL; y++) for (let x = 0; x < CEL; x++) tom(g, TERRA, x, y, 3 + (n(x, y) - 0.5) * 1.8 + (n2(x, y) - 0.5) * 1.1);
+  // folhas caídas e raizinhas
+  for (let k = 0; k < 7 + v * 2; k++) {
+    const x = (r() * 30) | 0, y = (r() * 30) | 0, c = r() < 0.5 ? MUSGO[3 + (r() * 2 | 0)] : ['#8a5a22', '#a8742c', '#6a3e1a'][(r() * 3) | 0];
+    px(g, x, y, c); px(g, x + 1, y, c); px(g, x, y + 1, TERRA[1]);
+  }
+  if (v === 2) { let x = 0, y = (r() * 20 + 6) | 0; while (x < CEL) { px(g, x, y, CASCA[4]); px(g, x, y + 1, CASCA[1]); x++; if (r() < 0.3) y += r() < 0.5 ? -1 : 1; } }
+  if (v === 3) for (let k = 0; k < 30; k++) { const x = (r() * CEL) | 0, y = (r() * (CEL - 1)) | 0; px(g, x, y, MUSGO[4 + (r() < 0.3 ? 1 : 0)]); px(g, x, y + 1, MUSGO[2]); }
+}
+
+function terraLado(g, r, v) {
+  const n = ruido(r, 4);
+  for (let y = 0; y < CEL; y++) for (let x = 0; x < CEL; x++) tom(g, TERRA, x, y, 2.4 + (n(x, y) - 0.5) * 1.4 + Math.sin((y + n(x, y) * 5) * 0.8) * 0.3 + (CEL - y) / CEL * 0.6);
+  for (let x = 0; x < CEL; x++) { px(g, x, 0, MUSGO[4]); px(g, x, 1, MUSGO[3]); if (r() < 0.4) px(g, x, 2, MUSGO[2]); }
+  // raízes finas atravessando o barranco
+  for (let k = 0; k < 1 + v; k++) { let x = (r() * CEL) | 0; for (let y = 3; y < CEL; y++) { px(g, x, y, CASCA[3]); if (r() < 0.35) x = (x + (r() < 0.5 ? -1 : 1) + CEL) % CEL; } }
+  if (v === 3) for (let k = 0; k < 4; k++) { const x = (r() * 30) | 0, y = 6 + (r() * 22) | 0; px(g, x, y, PEDRA[4]); px(g, x + 1, y, PEDRA[3]); }
+}
+
+// topo da raiz colossal: casca em anéis com musgo por cima
+function raizTopo(g, r, v) {
+  const n = ruido(r, 4);
+  for (let y = 0; y < CEL; y++) for (let x = 0; x < CEL; x++) {
+    const anel = Math.sin(Math.hypot(x - 16, y - 16) * 0.9 + n(x, y) * 3) * 0.6;
+    tom(g, CASCA, x, y, 3.2 + anel + (n(x, y) - 0.5) * 1.2);
+    const m = n(x, y) + (v === 0 ? -0.2 : 0.1);
+    if (m > 0.6) tom(g, MUSGO, x, y, 2.4 + (m - 0.6) * 8);
+  }
+  for (let x = 0; x < CEL; x++) { px(g, x, 0, CASCA[5]); px(g, x, CEL - 1, CASCA[1]); }
+  for (let y = 0; y < CEL; y++) { px(g, 0, y, CASCA[5]); px(g, CEL - 1, y, CASCA[1]); }
+}
+
+// lado da raiz colossal: fibras verticais, nós e musgo escorrendo
+function raizLado(g, r, v) {
+  const n = ruido(r, 4), n2 = ruido(r, 8);
+  for (let y = 0; y < CEL; y++) for (let x = 0; x < CEL; x++) {
+    const fibra = Math.sin((x + n(x, y) * 7) * 1.3) * 0.7;
+    tom(g, CASCA, x, y, 2.8 + fibra + (n2(x, y) - 0.5) * 0.8 + (CEL - y) / CEL * 0.4);
+  }
+  if (v === 1) { const cx = 8 + (r() * 16) | 0, cy = 8 + (r() * 16) | 0; for (let a = 0; a < 30; a++) { const t = a / 30 * Math.PI * 2; px(g, (cx + Math.cos(t) * 4) | 0, (cy + Math.sin(t) * 3) | 0, CASCA[0]); px(g, (cx + Math.cos(t) * 3) | 0, (cy + Math.sin(t) * 2) | 0, CASCA[5]); } }
+  if (v === 2) for (let k = 0; k < 9; k++) { const x = (r() * CEL) | 0, h = 3 + r() * 14; for (let y = 0; y < h; y++) px(g, x, y, MUSGO[2 + ((r() * 3) | 0)]); }
+  if (v === 3) for (let k = 0; k < 5; k++) { const x = (r() * 30) | 0, y = (r() * 30) | 0; px(g, x, y, SEIVA[3]); px(g, x, y + 1, SEIVA[2]); }   // seiva brotando
+}
+
+// raiz viva da Matriarca: rugosa, com veios de seiva que brilham (emissivo)
+function raizVivaTopo(g, r, v, emi) {
+  if (!emi) {
+    terraTopo(g, r, 0);
+    for (let k = 0; k < 3; k++) {
+      let y = 4 + k * 10 + ((r() * 4) | 0);
+      for (let x = 0; x < CEL; x++) {
+        for (let d = -2; d <= 2; d++) px(g, x, y + d, CASCA[Math.abs(d) === 2 ? 1 : 4 - Math.abs(d)]);
+        if (r() < 0.25) y += r() < 0.5 ? -1 : 1;
+        y = Math.max(3, Math.min(CEL - 4, y));
+      }
+    }
+  } else { g.fillStyle = '#000'; g.fillRect(0, 0, CEL, CEL); }
+  // veios: uma linha que emenda nas bordas (x = 0 e x = 31 na mesma altura)
+  let y = 16;
+  for (let x = 0; x < CEL; x++) {
+    px(g, x, y, emi ? '#3a6a20' : SEIVA[3]);
+    if (x % 5 === 2 && x < CEL - 4) y += (x / 5 | 0) % 2 ? 1 : -1;
+    if (x === CEL - 4) y = 16;
+  }
+  for (let k = 0; k < 6; k++) { const x = 2 + ((r() * 28) | 0), yy = 2 + ((r() * 28) | 0); px(g, x, yy, emi ? '#2a5018' : SEIVA[4]); }
+}
+
+// água rasa: fundo de lama visto por baixo da lâmina, com reflexos
+function aguaRasaTopo(g, r, v) {
+  const n = ruido(r, 4), n2 = ruido(r, 8);
+  for (let y = 0; y < CEL; y++) for (let x = 0; x < CEL; x++) tom(g, AGUA, x, y, 2.6 + (n(x, y) - 0.5) * 1.6 + (n2(x, y) - 0.5) * 0.8);
+  for (let k = 0; k < 5; k++) { const x = (r() * 26) | 0, y = (r() * 30) | 0; for (let d = 0; d < 3 + r() * 4; d++) px(g, x + d, y, AGUA[6]); }
+  if (v === 1) for (let k = 0; k < 4; k++) { const x = (r() * 30) | 0, y = (r() * 30) | 0; px(g, x, y, TERRA[4]); px(g, x + 1, y, TERRA[3]); }
+  if (v === 3) for (let k = 0; k < 3; k++) { const x = 4 + (r() * 24) | 0, y = 4 + (r() * 24) | 0; for (let a = 0; a < 16; a++) { const t = a / 16 * Math.PI * 2; px(g, (x + Math.cos(t) * 3) | 0, (y + Math.sin(t) * 2) | 0, AGUA[5]); } }
+}
+
+// superfície de água funda (textura repetida, rolada no tempo por visual.js)
+let texAgua = null;
+export function texturaAgua() {
+  if (texAgua) return texAgua;
+  const c = document.createElement('canvas');
+  c.width = c.height = CEL;
+  const g = c.getContext('2d'), r = rngSemente(777), n = ruido(r, 4), n2 = ruido(r, 8);
+  for (let y = 0; y < CEL; y++) for (let x = 0; x < CEL; x++) tom(g, AGUA, x, y, 2.1 + (n(x, y) - 0.5) * 1.4 + Math.sin((x + y * 0.5 + n2(x, y) * 8) * 0.5) * 0.5);
+  for (let k = 0; k < 7; k++) { const x = (r() * 26) | 0, y = (r() * 31) | 0; for (let d = 0; d < 2 + r() * 5; d++) px(g, x + d, y, AGUA[5 + (d % 3 === 0 ? 1 : 0)]); }
+  texAgua = texturaDeCanvas(c);
+  texAgua.wrapS = texAgua.wrapT = THREE.RepeatWrapping;
+  return texAgua;
+}
+
 const DESENHOS = {
   pedraTopo, pedraLado, musgoTopo, paredeTopo, paredeLado, paredeCornija,
   circuitoTopo, circuitoLado, ornatoTopo, colunaLado, rocha, colunaTopo,
+  terraTopo, terraLado, raizTopo, raizLado, raizVivaTopo, aguaRasaTopo,
 };
-const EMISSIVOS = new Set(['circuitoTopo', 'circuitoLado', 'ornatoTopo']);
+const EMISSIVOS = new Set(['circuitoTopo', 'circuitoLado', 'ornatoTopo', 'raizVivaTopo']);
 
 function texturaDeCanvas(c) {
   const t = new THREE.CanvasTexture(c);
@@ -293,6 +394,28 @@ const SPRITES = {
   chama: { w: 8, h: 12, desenhar(g, r) {
     const c = ['#c04a2c', '#d07a2c', '#e0b040', '#fff0b0'];
     for (let y = 0; y < 12; y++) { const larg = Math.max(0, Math.round(Math.sin((y / 12) * Math.PI) * 3.5 * (y / 12 + 0.3))); for (let x = -larg; x <= larg; x++) px(g, 4 + x, y, c[Math.min(3, Math.max(0, 3 - Math.abs(x) - (y < 4 ? 1 : 0)))]); }
+  } },
+  // Ato II
+  arbusto: { w: 32, h: 26, desenhar(g, r) {
+    const c = ['#1f2a14', '#2f3f1c', '#415826', '#577131', '#6d8a3d', '#86a44c'];
+    for (let k = 0; k < 9; k++) {
+      const cx = 5 + r() * 22, cy = 8 + r() * 12, rx = 4 + r() * 4, ry = 3 + r() * 2.5;
+      for (let y = -ry; y <= ry; y++) for (let x = -rx; x <= rx; x++) {
+        const d = (x / rx) ** 2 + (y / ry) ** 2;
+        if (d > 1) continue;
+        const l = (-x / rx * 0.5 - y / ry * 0.9) + (1 - d) * 0.4;
+        px(g, Math.round(cx + x), Math.round(cy + y), c[Math.max(0, Math.min(5, Math.round(2.6 + l * 2 + bayer(Math.round(cx + x), Math.round(cy + y)) - 0.5)))]);
+      }
+    }
+    for (let x = 12; x < 20; x++) px(g, x, 25, '#2a1d12');
+  } },
+  flores: { w: 16, h: 14, desenhar(g, r) {
+    const hastes = ['#415826', '#577131'], petalas = [['#c04a4a', '#ff7a6a'], ['#d09a2c', '#f0d070'], ['#9a5ac0', '#d0a0f0']];
+    for (let k = 0; k < 5; k++) {
+      const x = 2 + (r() * 12) | 0, h = 5 + (r() * 7) | 0, p = petalas[(r() * 3) | 0];
+      for (let y = 13; y > 13 - h; y--) px(g, x, y, hastes[y % 2]);
+      const y = 13 - h; px(g, x, y, p[1]); px(g, x - 1, y, p[0]); px(g, x + 1, y, p[0]); px(g, x, y - 1, p[0]); px(g, x, y + 1, p[0]);
+    }
   } },
   brilho: { w: 16, h: 16, desenhar(g) {
     for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const d = Math.hypot(x - 7.5, y - 7.5) / 8; if (d < 1 && bayer(x, y) < (1 - d) * 0.9) px(g, x, y, '#ffffff'); }

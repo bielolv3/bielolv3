@@ -3,6 +3,7 @@ export default {
   id: 'sala04',
   nome: 'Câmara dos Selos',
   subtitulo: 'lacres de quem veio depois',
+  reliquia: 'disco',   // 'Y': Disco Solar, atrás do selo da memória
   chao: [
     '##################',
     '#c....c#.........#',
@@ -34,7 +35,7 @@ export default {
     '             G    ',
     '                  ',
     '      S           ',
-    '      M           ',
+    '     YM           ',
     '                  ',
   ],
   deco: [

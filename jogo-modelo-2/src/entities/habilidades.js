@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Banana, Onda, Braco } from './projeteis.js';
+import { SistemaReliquias } from './reliquias.js';
 
 // Frente A: identidade (K), recurso (L) e Surto (F) dos três macacos.
 // `atualizarJogador` roda todo quadro, antes da física do jogador.
@@ -18,6 +19,7 @@ export class Habilidades {
     this.tGuarda = 0;         // tempo desde que apertou a Guarda
     this.mergulho = null;     // Pulverizar em andamento
     this.segurado = null;     // o que o Orlando está segurando
+    this.reliquias = jogo.reliquias = new SistemaReliquias(jogo, this);   // R alterna, U usa
     // dano causado pelo jogador carrega o Surto
     jogo.eventos.on('dano', ({ alvo, qtd, origem }) => {
       const j = jogo.jogador;
@@ -38,11 +40,13 @@ export class Habilidades {
     this.escudo.scale.y = 1.6;
     this.escudo.visible = false;
     j.objeto.add(this.escudo);
+    this.reliquias.prepararJogador(j);
   }
 
   // Jogador.receberDano passa por aqui. null = dano anulado.
   filtrarDano(j, qtd, origem, opts = {}) {
     if (j.invulneravel > 0) return { qtd, opts };
+    if (this.reliquias.anula(j, origem)) return null;   // escudo solar / bolha
     opts = { ...opts };
     const surto = j.surto.ativo > 0;
     if (surto) opts.atordoa = 0;
@@ -80,6 +84,7 @@ export class Habilidades {
     if (livre && input.apertou('identidade') && j.recarga.identidade <= 0 && !surto) this.identidade(j);
     if (livre && input.apertou('recurso')) this.recurso(j);
     this.atualizarSegurado(j, dt, surto);
+    this.reliquias.atualizar(j, dt, input, livre);
 
     this.escudo.visible = this.recursos.guardando;
     this.escudo.material.opacity += (0.3 - this.escudo.material.opacity) * Math.min(1, dt * 6);

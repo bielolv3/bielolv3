@@ -6,6 +6,7 @@ export default {
   id: 'sala08',
   nome: 'Comporta dos Três',
   subtitulo: 'um sobe, um voa, um quebra',
+  reliquia: 'sismico',   // 'Y': Coração Sísmico, no alto da muralha (Chico)
   chao: [
     '######################',
     '#4444~~~~~~~~~...#...#',
@@ -24,7 +25,7 @@ export default {
   ],
   coisas: [
     '                      ',
-    '                      ',
+    ' Y                    ',
     '                   X  ',
     '         L      SD    ',
     '                   M  ',

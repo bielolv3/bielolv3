@@ -4,6 +4,7 @@ import * as THREE from 'three';
 // `zoom` = quantos tiles cabem na altura da tela.
 export class CameraIso {
   constructor(tilesNaAltura = 14) {
+    this.tilesBase = tilesNaAltura;
     this.tilesNaAltura = tilesNaAltura;
     this.cam = new THREE.OrthographicCamera(-1, 1, 1, -1, -100, 200);
     this.alvo = new THREE.Vector3();
@@ -19,7 +20,17 @@ export class CameraIso {
 
   tremer(forca = 0.3) { this.tremor = Math.max(this.tremor, forca); }
 
+  // retrato precisa ver mais (largura mínima em tiles); paisagem baixa (celular deitado)
+  // vê um pouco menos na altura para os sprites não ficarem minúsculos
+  tilesPara(w, h) {
+    const asp = w / h;
+    if (asp < 1.25) return Math.min(26, Math.max(this.tilesBase, 11.5 / asp));
+    if (h < 500) return this.tilesBase - 1.5;
+    return this.tilesBase;
+  }
+
   redimensionar(w, h) {
+    this.tilesNaAltura = this.tilesPara(w, h);
     const meiaAlt = this.tilesNaAltura / 2;
     const meiaLarg = meiaAlt * (w / h);
     Object.assign(this.cam, { left: -meiaLarg, right: meiaLarg, top: meiaAlt, bottom: -meiaAlt });

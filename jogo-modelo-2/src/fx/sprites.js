@@ -170,3 +170,115 @@ export function aplicarSpriteInimigo(ent, tipo, escala = 1) {
   ent.objeto.add(ent.sprite);
   return ent.sprite;
 }
+
+// ---------------------------------------------------------------- Ato II: fauna do veio Seiva
+// (src/entities/fauna.js). Todos desenhados virados para a ESQUERDA da tela.
+const PELO = ['#1f140c', '#3a2414', '#5a381e', '#7a5028', '#9a6a36', '#b88a4c'];
+const FOLHA = ['#1c2a12', '#2c4018', '#415826', '#577131', '#6d8a3d', '#8fb055'];
+const CASCO = ['#2a2012', '#43321a', '#5e4624', '#7a5c30', '#94733e'];
+const PELE = ['#243a1a', '#35542a', '#4a7038', '#62904a', '#82b060'];
+const CARNE = ['#4a0e14', '#7a1a20', '#b0302c', '#e0503c', '#ff8a6a'];
+const QUITINA = ['#2a140a', '#4a2410', '#703a18', '#9a5420', '#c47a30', '#e8a850'];
+const OSSO = '#e9e1cf';
+const AMBAR = ['#5a2a0a', '#b05a20', '#f0a040', '#fff0b0'];
+
+Object.assign(DESENHOS, {
+  // Javali-raiz: dorso com raízes e musgo, presas de osso
+  javali: [44, 30, (t) => {
+    t.re(10, 20, 4, 9, PELO, 1); t.re(17, 21, 4, 8, PELO, 1); t.re(28, 21, 4, 8, PELO, 1); t.re(34, 20, 4, 9, PELO, 1);   // patas
+    t.el(24, 16, 16, 9, PELO);                                              // corpo
+    t.el(9, 17, 8, 6.5, PELO);                                              // cabeça
+    t.el(3, 19, 3, 2.5, ['#5a3828', '#7a4a38', '#9a6a58']);                 // focinho
+    t.set(2, 19, TINTA); t.set(4, 19, TINTA);
+    t.linha(5, 21, 2, 16, OSSO); t.linha(6, 21, 3, 17, OSSO);               // presa
+    t.set(9, 14, '#ffd24a'); t.set(10, 14, '#ffd24a');                      // olho
+    t.el(12, 10, 2, 3, PELO);                                               // orelha
+    for (let x = 14; x < 38; x += 3) t.linha(x, 8 + ((x * 7) % 3), x + 1, 3 + ((x * 5) % 4), FOLHA[2 + (x % 3)]);   // raízes/brotos no dorso
+    t.el(24, 9, 10, 2.5, FOLHA);                                            // musgo no lombo
+    t.linha(40, 14, 43, 12, PELO[2]);                                       // rabo
+  }],
+  // Planta-carnívora: haste, folhas e cabeça-boca vermelha com dentes
+  planta: [30, 40, (t) => {
+    t.linha(15, 39, 15, 18, FOLHA[3]); t.linha(16, 39, 16, 18, FOLHA[2]);
+    t.el(8, 34, 7, 3, FOLHA); t.el(23, 32, 7, 3, FOLHA);                    // folhas no pé
+    t.el(15, 12, 12, 10, CARNE);                                            // cabeça
+    for (let x = 5; x <= 25; x += 3) { t.set(x, 12, OSSO); t.set(x + 1, 13, OSSO); }   // dentes
+    t.linha(4, 12, 26, 12, CARNE[0]);                                       // boca
+    for (const [x, y] of [[9, 6], [18, 5], [22, 9], [12, 18], [20, 17]]) { t.set(x, y, OSSO); t.set(x + 1, y, '#f0d0c0'); }   // pintas
+    t.el(15, 23, 5, 2, FOLHA);                                              // colarinho
+  }],
+  // Sapo-bombástico: vermelho com costas verdes e papo que incha
+  sapo: [26, 20, (t) => {
+    t.el(19, 16, 5, 3, PELE); t.el(6, 17, 4, 2.5, PELE);                    // patas
+    t.el(13, 12, 10, 7, CARNE);                                             // corpo
+    t.el(15, 9, 7, 3.5, PELE);                                              // costas verdes
+    t.el(7, 15, 4.5, 3, ['#c07a3a', '#e8b060', '#ffd890']);                 // papo
+    t.el(6, 6, 3, 3, CARNE); t.el(12, 5, 3, 3, CARNE);                      // olhos saltados
+    t.set(6, 6, TINTA); t.set(12, 5, TINTA); t.set(5, 5, OSSO); t.set(11, 4, OSSO);
+    for (const [x, y] of [[16, 8], [20, 10], [13, 10]]) t.set(x, y, '#ffd24a');   // verrugas de veneno
+  }],
+  // Aranha-gigante: abdômen listrado, oito patas, olhos vermelhos
+  aranha: [46, 30, (t) => {
+    for (const [x0, y0, x1, y1, x2, y2] of [[16, 16, 6, 6, 1, 28], [18, 17, 10, 8, 7, 29], [26, 17, 34, 8, 38, 29], [28, 16, 40, 6, 45, 28],
+      [17, 18, 9, 14, 3, 22], [27, 18, 36, 14, 43, 22], [20, 18, 14, 20, 12, 29], [24, 18, 30, 20, 32, 29]]) {
+      t.linha(x0, y0, x1, y1, QUITINA[2]); t.linha(x1, y1, x2, y2, QUITINA[1]); t.linha(x1 + 1, y1, x2 + 1, y2, QUITINA[3]);
+    }
+    t.el(31, 13, 10, 8, QUITINA);                                           // abdômen
+    for (let x = 25; x < 40; x += 4) t.linha(x, 7, x + 1, 20, QUITINA[5]);  // listras
+    t.el(17, 16, 6, 5, QUITINA);                                            // cefalotórax
+    t.set(13, 14, '#ff4a3a'); t.set(15, 13, '#ff4a3a'); t.set(14, 16, '#ff4a3a'); t.set(12, 16, '#c02a20');
+    t.linha(11, 19, 10, 22, QUITINA[0]); t.linha(14, 19, 14, 22, QUITINA[0]);   // quelíceras
+  }],
+  // Tartaruga-menor: casco de placas com um broto (e uma ruinazinha) em cima
+  tartaruga: [40, 26, (t) => {
+    t.el(8, 22, 4, 3, PELE); t.el(30, 22, 4, 3, PELE);                      // patas
+    t.el(20, 16, 15, 8, CASCO);                                             // casco
+    for (let x = 9; x < 32; x += 6) t.linha(x, 11, x + 2, 22, CASCO[0]);    // placas
+    t.linha(6, 19, 34, 19, CASCO[1]);
+    t.el(4, 16, 4.5, 3.5, PELE); t.set(2, 15, TINTA); t.set(3, 14, OSSO);   // cabeça, olho
+    t.re(16, 5, 3, 5, ['#4f4535', '#655845', '#7c6d56', '#948468']);         // ruína em miniatura
+    t.set(17, 6, '#e0b050');
+    t.linha(24, 9, 24, 3, FOLHA[2]); t.el(24, 3, 3, 2, FOLHA);              // arvorezinha
+    t.linha(36, 18, 39, 19, PELE[2]);                                       // rabo
+  }],
+  // Inseto-luz
+  inseto: [12, 10, (t) => {
+    t.el(6, 5, 3, 2.5, ['#1a2a4a', '#2a4a8a', '#4a7ad0']);
+    t.el(9, 6, 2.5, 2, ['#60c0ff', '#a0e8ff', '#f0ffff']);
+    t.el(5, 2, 2, 1.5, ['#90b0d0', '#d0e8f8']);
+  }],
+  // Ninho: tigela de gravetos com ovos
+  ninho: [32, 16, (t) => {
+    t.el(16, 11, 15, 4.5, CASCO);
+    for (let x = 2; x < 30; x += 2) t.linha(x, 8 + (x % 3), x + 3, 14 - (x % 2), CASCO[(x >> 1) % 2 ? 1 : 3]);
+    t.el(11, 7, 3.5, 4, ['#b0a890', '#d8d0b8', '#f4eedc']); t.el(18, 6, 3.5, 4.5, ['#b0a890', '#d8d0b8', '#f4eedc']); t.el(24, 8, 3, 3.5, ['#b0a890', '#d8d0b8', '#f4eedc']);
+    t.set(18, 4, '#7a9a5a'); t.set(11, 6, '#7a9a5a');
+  }],
+  // A Matriarca: colosso de pedra e raiz, com mata nos ombros e núcleo âmbar no peito
+  matriarca: [150, 184, (t) => {
+    const PED = ['#1e2418', '#2e3824', '#44503a', '#5c6a4c', '#78885e', '#96a676'];
+    const RZ = ['#1a120b', '#2e2014', '#46321e', '#5e4428', '#7a5a36'];
+    t.re(38, 132, 26, 50, PED, 2); t.re(88, 132, 26, 50, PED, 2);           // pernas-pilar
+    for (let y = 138; y < 180; y += 8) { t.linha(39, y, 62, y, PED[1]); t.linha(89, y, 112, y, PED[1]); }
+    t.el(75, 92, 52, 46, PED);                                              // tronco
+    t.el(30, 60, 22, 18, PED); t.el(120, 60, 22, 18, PED);                  // ombros
+    t.re(10, 66, 22, 70, PED, 2); t.re(118, 66, 22, 70, PED, 2);            // braços
+    t.el(20, 138, 13, 10, PED); t.el(130, 138, 13, 10, PED);                // punhos
+    for (let y = 70; y < 132; y += 10) { t.linha(11, y, 30, y, PED[1]); t.linha(119, y, 138, y, PED[1]); }
+    for (let y = 60; y < 130; y += 11) t.linha(34, y, 116, y + 2, PED[1]);   // juntas dos blocos
+    t.el(75, 44, 15, 12, PED);                                              // cabeça
+    t.re(64, 42, 22, 3, [AMBAR[0], AMBAR[1], AMBAR[2]], 1);                 // olhos em fenda
+    t.el(75, 86, 13, 13, PED.slice(0, 3));                                  // anel do núcleo
+    t.el(75, 86, 8, 8, AMBAR); t.el(75, 86, 3, 3, [AMBAR[2], AMBAR[3]]);   // núcleo
+    // raízes enroscadas pelo corpo todo
+    const raiz = (x, y, n, dx) => { for (let k = 0; k < n; k++) { t.set(x, y, RZ[2 + (k % 2)]); t.set(x + 1, y, RZ[1]); y++; x += Math.round(Math.sin(k * 0.35 + dx) * 1.2); } };
+    for (let k = 0; k < 16; k++) raiz(20 + ((k * 37) % 112), 48 + ((k * 23) % 50), 26 + ((k * 13) % 50), k);
+    for (let k = 0; k < 8; k++) raiz(12 + ((k * 17) % 20) + (k > 3 ? 106 : 0), 120, 20 + k * 3, k);
+    // cascatas escorrendo dos ombros
+    for (const x of [48, 100]) for (let y = 58; y < 150; y++) { t.set(x, y, '#c8e8e0'); t.set(x + 1, y, '#90c8c0'); if (y % 5 === 0) t.set(x + 2, y, '#e8fffa'); }
+    // mata nos ombros e na cabeça
+    for (const [cx, cy, rx, ry] of [[28, 44, 18, 12], [122, 44, 18, 12], [75, 28, 16, 10], [50, 52, 10, 7], [100, 52, 10, 7], [14, 54, 8, 6], [136, 54, 8, 6]]) t.el(cx, cy, rx, ry, FOLHA);
+    for (const [x, h] of [[24, 18], [70, 22], [84, 16], [118, 20], [36, 12]]) { t.linha(x, 40, x, 40 - h, RZ[3]); t.el(x, 40 - h, 6, 5, FOLHA); }
+  }],
+});
+TIPOS_INIMIGO.push('javali', 'planta', 'sapo', 'aranha', 'tartaruga', 'inseto', 'ninho', 'matriarca');

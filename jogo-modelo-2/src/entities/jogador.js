@@ -1,9 +1,17 @@
 import * as THREE from 'three';
-import { Entidade } from './entidade.js';
+import { Entidade, animarMaterial } from './entidade.js';
 import { GRAVIDADE } from '../world/fisica.js';
+import { aproximarDaCamera } from '../world/visual.js';
+import { fixo } from '../core/liberar.js';
 
 const BASE = import.meta.env.BASE_URL;
 const _direita = new THREE.Vector3();
+const EIXO_NULO = { x: 0, y: 0 };
+
+// anel no chão sob o jogador quando está no ar (ajuda a medir o pulo)
+const geoMarca = new THREE.RingGeometry(0.2, 0.3, 24).rotateX(-Math.PI / 2);
+const matMarca = new THREE.MeshBasicMaterial({ color: 0xd09a2c, transparent: true, opacity: 0.7, depthWrite: false, fog: false });
+fixo(geoMarca, matMarca);
 
 // Números de cada macaco. Mecânica de identidade/recurso/surto fica em habilidades.js.
 export const MACACOS = {
@@ -22,6 +30,41 @@ export class Jogador extends Entidade {
     this.olhando = new THREE.Vector3(1, 0, 0);
     this.trocar('hugo', true);
     this.jogo.habilidades?.prepararJogador(this);   // cria this.recursos (HUD)
+    this.marca = new THREE.Mesh(geoMarca, matMarca);
+    this.marca.renderOrder = 5;
+    this.marca.visible = false;
+    this.objeto.add(this.marca);
+    this.passada = 0;
+  }
+
+  // silhueta cor de mostarda que só aparece onde algo está na frente do jogador
+  montarSilhueta() {
+    const m = new THREE.SpriteMaterial({ transparent: true, alphaTest: 0.5, depthWrite: false, depthFunc: THREE.GreaterDepth, opacity: 0.8, fog: false });
+    const u = animarMaterial(m);
+    const c = new THREE.Color(0xd09a2c);
+    u.uCorFixa.value.set(c.r, c.g, c.b, 1);
+    u.uPontilhado.value = 1;
+    this.silhueta = new THREE.Sprite(m);
+    this.silhueta.center.set(0.5, 0);
+    this.silhueta.renderOrder = 30;
+    aproximarDaCamera(this.silhueta, 0.6);
+    this.objeto.add(this.silhueta);
+  }
+
+  sincronizarSilhueta() {
+    if (!this.sprite) return;
+    if (!this.silhueta) this.montarSilhueta();
+    const s = this.silhueta, m = s.material, orig = this.sprite.material;
+    if (m.map !== orig.map) { m.map = orig.map; m.needsUpdate = true; }
+    s.scale.copy(this.sprite.scale);
+    s.position.copy(this.sprite.position);
+    const u = m.userData.anim, o = orig.userData.anim;
+    if (o) {
+      u.uDeform.value.copy(o.uDeform.value); u.uDesloc.value.copy(o.uDesloc.value);
+      u.uInclina.value = o.uInclina.value; u.uEspelho.value = o.uEspelho.value;
+    }
+    m.rotation = orig.rotation;
+    s.visible = this.sprite.visible && orig.opacity > 0.5;
   }
 
   // Guarda, parry, Massa e Surto filtram o dano (habilidades.js); null = anulado
@@ -48,6 +91,7 @@ export class Jogador extends Entidade {
 
   atualizar(dt) {
     const { input, camera } = this.jogo;
+    const bloqueado = !!this.jogo.transicao;   // transição de sala: sem controle
     for (const k in this.recarga) this.recarga[k] = Math.max(0, this.recarga[k] - dt);
 
     if (input.apertou('hugo')) this.trocar('hugo');
@@ -57,7 +101,7 @@ export class Jogador extends Entidade {
     // movimento relativo à câmera
     const s = this.stats;
     const mult = this.surto.ativo > 0 ? 1.15 : 1;
-    const dir = camera.eixoParaMundo(input.eixo);
+    const dir = camera.eixoParaMundo(bloqueado ? EIXO_NULO : input.eixo);
     const controle = this.noChao ? 1 : 0.6;
     if (this.atordoado <= 0) {
       const alvoX = dir.x * s.velocidade * mult, alvoZ = dir.z * s.velocidade * mult;
@@ -81,7 +125,15 @@ export class Jogador extends Entidade {
     }
 
     this.jogo.habilidades?.atualizarJogador(this, dt);
+    const noChaoAntes = this.noChao, vyAntes = this.vel.y;
     this.fisica(dt);
+    // poeira: pouso e passadas (fx escuta)
+    if (this.noChao && !noChaoAntes && vyAntes < -3) this.jogo.eventos.emitir('pouso', { alvo: this, forca: -vyAntes });
+    const h = Math.hypot(this.vel.x, this.vel.z);
+    if (this.noChao && h > 2.5) {
+      this.passada += h * dt;
+      if (this.passada > 1.1) { this.passada = 0; this.jogo.eventos.emitir('passada', { alvo: this }); }
+    } else this.passada = 0.8;
 
     if (this.caiu) this.voltarAoUltimoChao();
     // só guarda chão firme sob o centro (não a beirada com o centro sobre o abismo)
@@ -94,6 +146,17 @@ export class Jogador extends Entidade {
       if (Math.abs(lado) > 0.2) this.sprite.scale.x = Math.abs(this.sprite.scale.x) * (lado < 0 ? -1 : 1);
     }
     this.sincronizar(dt);
+    // marca no chão quando está no ar
+    const mapa = this.jogo.mapa;
+    const alturaChao = this.pos.y - (this.sombra.position.y + this.pos.y - 0.01);
+    const noAr = !this.noChao && alturaChao > 0.35 && !mapa.vazioEm(this.pos.x, this.pos.z);
+    this.marca.visible = noAr;
+    if (noAr) {
+      this.marca.position.y = this.sombra.position.y + 0.01;
+      this.marca.scale.setScalar(1 + Math.min(1.2, alturaChao * 0.25));
+    }
+    this.sombra.scale.setScalar(this.raio * 1.2 * (1 - Math.min(0.45, Math.max(0, alturaChao) * 0.12)));
+    this.sincronizarSilhueta();
   }
 
   golpear() {

@@ -2,23 +2,45 @@ import * as THREE from 'three';
 import { rngSemente } from './texturas.js';
 import { U, atualizarVisual } from './visual.js';
 import { renderizadorSoftware } from '../fx/pos.js';
+import { SALAS } from '../levels/index.js';
 
 // Luz, céu, névoa e fundo (Tartaruga-Mundo no horizonte) da sala. Cria `jogo.sol`
 // (DirectionalLight com sombra), que o loop reposiciona para seguir o jogador.
 // O céu é um quad de tela inteira desenhado antes de tudo; ele também dispara a
 // atualização dos uniformes visuais do mundo uma vez por quadro.
 
-const COR_NEVOA = 0x8a6630;
 const _tamTela = new THREE.Vector2();
+
+// Biomas: `sala.bioma` escolhe luz, névoa e céu. 'ruina' (Ato I, padrão) = céu mostarda
+// com a Tartaruga-Mundo; 'seiva' (Ato II) = luz verde filtrada pelo dossel, névoa úmida,
+// raízes colossais e a silhueta da Matriarca ao fundo.
+const BIOMAS = {
+  ruina: {
+    fundo: 0x3a2a14, nevoa: 0x8a6630, perto: 34, longe: 80, nevoaAltura: 0x6e5026,
+    ceu: 0xf6dcaa, chao: 0x4a3822, hemi: 1.9, sol: 0xffdca6, forcaSol: 3.4,
+    // gradiente do céu (sRGB 0..1): topo, meio, horizonte, nuvem, fundo, faixa, mar escuro/claro
+    grad: [[0.16, 0.11, 0.05], [0.42, 0.29, 0.12], [0.80, 0.58, 0.24], [0.62, 0.46, 0.22], [0.20, 0.14, 0.07], [0.62, 0.45, 0.2], [0.56, 0.42, 0.21], [0.78, 0.62, 0.34]],
+    dossel: 0,
+  },
+  seiva: {
+    fundo: 0x14200f, nevoa: 0x4a6a3c, perto: 26, longe: 70, nevoaAltura: 0x2f4a2a,
+    ceu: 0xd8f0b0, chao: 0x2a3418, hemi: 1.75, sol: 0xf0f4b8, forcaSol: 2.7,
+    grad: [[0.05, 0.09, 0.04], [0.18, 0.30, 0.13], [0.62, 0.72, 0.38], [0.42, 0.56, 0.32], [0.08, 0.14, 0.07], [0.30, 0.44, 0.2], [0.34, 0.46, 0.28], [0.56, 0.68, 0.44]],
+    dossel: 1,
+  },
+};
 
 export function montarAmbiente(jogo) {
   const cena = jogo.cena;
-  cena.background = new THREE.Color(0x3a2a14);
-  cena.fog = new THREE.Fog(COR_NEVOA, 34, 80);
-  U.uCorNevoa.value.set(0x6e5026);
+  const bioma = SALAS[jogo.indiceSala]?.bioma ?? 'ruina';
+  const B = BIOMAS[bioma] ?? BIOMAS.ruina;
+  jogo.bioma = bioma;
+  cena.background = new THREE.Color(B.fundo);
+  cena.fog = new THREE.Fog(B.nevoa, B.perto, B.longe);
+  U.uCorNevoa.value.set(B.nevoaAltura);
 
-  cena.add(new THREE.HemisphereLight(0xf6dcaa, 0x4a3822, 1.9));
-  const sol = new THREE.DirectionalLight(0xffdca6, 3.4);
+  cena.add(new THREE.HemisphereLight(B.ceu, B.chao, B.hemi));
+  const sol = new THREE.DirectionalLight(B.sol, B.forcaSol);
   sol.position.set(8, 16, 4);
   sol.castShadow = true;
   const res = renderizadorSoftware(jogo.renderer) ? 1024 : 2048;
@@ -29,7 +51,7 @@ export function montarAmbiente(jogo) {
   cena.add(sol, sol.target);
   jogo.sol = sol;
 
-  cena.add(criarCeu(jogo));
+  cena.add(criarCeu(jogo, B, bioma));
 }
 
 // ---------------- céu ----------------
@@ -46,7 +68,10 @@ function texturasCeu() {
     // sem colorSpace: o shader trabalha em sRGB e converte para linear no fim
     return t;
   };
-  texCeu = { longe: fazer(desenharLonge, 11), colosso: fazer(desenharColosso, 23) };
+  texCeu = {
+    ruina: { longe: fazer(desenharLonge, 11), colosso: fazer(desenharColosso, 23) },
+    seiva: { longe: fazer(desenharMataLonge, 31), colosso: fazer(desenharMatriarca, 47) },
+  };
   return texCeu;
 }
 
@@ -126,19 +151,87 @@ function desenharColosso(g, r) {
   ret(g, ax + 3, ay - 28, 3, 3, '#4fa6ab');
 }
 
-function criarCeu(jogo) {
-  const { longe, colosso } = texturasCeu();
+// ---------- bioma Seiva ----------
+// mata ao longe: troncos colossais subindo para fora do quadro e raízes aéreas em arco
+function desenharMataLonge(g, r) {
+  const TR = '#4a6a3a', TR_L = '#5e8048', COPA = '#3e5e30';
+  for (let k = 0; k < 16; k++) {
+    const x = r() * 1440, w = 8 + r() * 22;
+    ret(g, x, 0, w, 120, TR); ret(g, x, 0, 2, 120, TR_L);
+    for (let y = 70 + r() * 20; y < 120; y += 3) ret(g, x - (120 - y) * 0.25, y, w + (120 - y) * 0.5, 3, TR);   // raiz abrindo no pé
+  }
+  // raízes aéreas em arco entre troncos
+  for (let k = 0; k < 10; k++) {
+    const x0 = r() * 1440, larg = 60 + r() * 120, alt = 20 + r() * 40, esp = 2 + r() * 3, base = 100 + r() * 15;
+    for (let x = 0; x < larg; x++) ret(g, x0 + x, base - Math.sin(x / larg * Math.PI) * alt, 1, esp, TR);
+  }
+  // morros de mata na linha do horizonte
+  for (let x = 0; x < 1440; x++) { const h = 12 + Math.sin(x * 0.02) * 6 + Math.sin(x * 0.07 + 1) * 4 + r() * 2; ret(g, x, 104 - h, 1, h + 16, COPA); }
+}
+
+// A Matriarca ao longe: colosso de pedra e raiz, floresta nos ombros, núcleo âmbar,
+// cascatas escorrendo do peito. Em volta, troncos gigantes e o dossel.
+function desenharMatriarca(g, r) {
+  const PEDRA = '#3e4a30', PEDRA_L = '#56663e', SOMBRA = '#2c3622', RAIZ = '#3a3020', MATA = '#2f4a22', MATA_L = '#43662e', AGUA = '#b8d8b0';
+  const cx = 360, base = 118;
+  // pernas-pilar
+  for (const px of [-58, 30]) { ret(g, cx + px, base - 46, 30, 50, SOMBRA); ret(g, cx + px, base - 46, 4, 50, PEDRA); for (let y = base - 44; y < base; y += 7) ret(g, cx + px + 4, y, 26, 1, PEDRA); }
+  // tronco (ombros largos), blocos de pedra
+  for (let y = -100; y <= -40; y++) {
+    const larg = 62 - Math.max(0, (y + 60)) * 0.4 + (y < -86 ? (y + 86) * 1.2 : 0);
+    ret(g, cx - larg, base + y, larg * 2, 1, (y + 100) % 11 === 0 ? SOMBRA : PEDRA);
+    ret(g, cx - larg, base + y, 3, 1, PEDRA_L);
+  }
+  for (let k = 0; k < 18; k++) ret(g, cx - 55 + r() * 100, base - 95 + r() * 50, 8 + r() * 8, 1, SOMBRA);   // juntas
+  // braços pendendo, com raízes
+  for (const s of [-1, 1]) {
+    const ox = cx + s * 64;
+    for (let y = -96; y < -14; y++) ret(g, ox + (s < 0 ? -18 : 0) + Math.sin(y * 0.05) * 3 * s, base + y, 18, 1, (y % 9 === 0) ? SOMBRA : PEDRA);
+    for (let k = 0; k < 6; k++) { let x = ox + (r() * 18) - (s < 0 ? 18 : 0); for (let y = -30; y < -30 + 20 + r() * 26; y++) { ret(g, x, base + y, 1, 1, RAIZ); if (r() < 0.3) x += r() < 0.5 ? -1 : 1; } }
+  }
+  // cabeça baixa entre os ombros
+  for (let y = -10; y <= 8; y++) for (let x = -14; x <= 14; x++) if ((x / 14) ** 2 + (y / 10) ** 2 < 1) ret(g, cx + x, base - 108 + y, 1, 1, y < -6 ? PEDRA_L : PEDRA);
+  ret(g, cx - 7, base - 110, 3, 2, '#e0a040'); ret(g, cx + 5, base - 110, 3, 2, '#e0a040');
+  // núcleo âmbar no peito, com anel
+  for (let a = 0; a < 60; a++) { const t = a / 60 * Math.PI * 2; ret(g, cx + Math.cos(t) * 11, base - 72 + Math.sin(t) * 11, 2, 2, SOMBRA); }
+  for (let y = -6; y <= 6; y++) for (let x = -6; x <= 6; x++) { const d = Math.hypot(x, y); if (d < 6) ret(g, cx + x, base - 72 + y, 1, 1, d < 2.5 ? '#fff0b0' : d < 4.5 ? '#f0a040' : '#b05a20'); }
+  // floresta nos ombros e na cabeça
+  for (let k = 0; k < 40; k++) {
+    const x = cx - 70 + r() * 140, topo = base - 100 - (Math.abs(x - cx) < 16 ? 16 : 0);
+    const w = 4 + r() * 10, h = 4 + r() * 16;
+    for (let a = 0; a < w; a++) { const hh = Math.sin(a / w * Math.PI) * h; ret(g, x + a, topo - hh, 1, hh + 3, a < w / 2 ? MATA_L : MATA); }
+    if (r() < 0.3) ret(g, x + w / 2, topo, 1, 5, RAIZ);
+  }
+  // raízes pendendo do corpo todo e cascatas do peito
+  for (let k = 0; k < 30; k++) { let x = cx - 60 + r() * 120; const y0 = base - 90 + r() * 40; for (let y = y0; y < y0 + 10 + r() * 30; y++) { ret(g, x, y, 1, 1, RAIZ); if (r() < 0.25) x += r() < 0.5 ? -1 : 1; } }
+  for (const k of [-34, 22]) { ret(g, cx + k, base - 88, 3, 88, AGUA); ret(g, cx + k + 3, base - 88, 1, 88, '#90b890'); }
+  // troncos colossais emoldurando o resto do horizonte
+  for (let k = 0; k < 12; k++) {
+    let x = 520 + r() * 900; const w = 14 + r() * 26;
+    ret(g, x, 0, w, 120, SOMBRA); ret(g, x, 0, 3, 120, PEDRA);
+    for (let y = 80; y < 120; y += 2) ret(g, x - (y - 80) * 0.5, y, w + (y - 80), 2, SOMBRA);
+  }
+  for (let x = 0; x < 1440; x++) { const h = 6 + Math.sin(x * 0.03) * 3 + r() * 2; ret(g, x, 120 - h, 1, h, MATA); }
+}
+
+function criarCeu(jogo, B, bioma) {
+  const { longe, colosso } = texturasCeu()[bioma] ?? texturasCeu().ruina;
+  const v3 = (c) => new THREE.Vector3(...c);
   const mat = new THREE.ShaderMaterial({
     uniforms: {
       uLonge: { value: longe }, uColosso: { value: colosso },
       uAspecto: { value: 1 }, uAltTela: { value: 720 },
       uGiro: { value: 0 }, uDesloc: { value: 0 }, uTempo: U.uTempo,
+      uTopo: { value: v3(B.grad[0]) }, uMeio: { value: v3(B.grad[1]) }, uHor: { value: v3(B.grad[2]) },
+      uNuvem: { value: v3(B.grad[3]) }, uFundo: { value: v3(B.grad[4]) }, uFaixa: { value: v3(B.grad[5]) },
+      uMarA: { value: v3(B.grad[6]) }, uMarB: { value: v3(B.grad[7]) }, uDossel: { value: B.dossel },
     },
     vertexShader: /* glsl */`
       varying vec2 vUv;
       void main() { vUv = uv; gl_Position = vec4(position.xy, 0.9999, 1.0); }`,
     fragmentShader: /* glsl */`
       uniform sampler2D uLonge, uColosso; uniform float uAspecto, uAltTela, uGiro, uDesloc, uTempo;
+      uniform vec3 uTopo, uMeio, uHor, uNuvem, uFundo, uFaixa, uMarA, uMarB; uniform float uDossel;
       varying vec2 vUv;
       float h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
       float ruido(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
@@ -155,8 +248,8 @@ function criarCeu(jogo) {
         float d = bayer4(cel);
         // gradiente: mostarda escura em cima, brilho no horizonte, mar de nuvens embaixo
         vec3 c;
-        vec3 topo = vec3(0.16, 0.11, 0.05), meio = vec3(0.42, 0.29, 0.12), hor = vec3(0.80, 0.58, 0.24);
-        vec3 nuvem = vec3(0.62, 0.46, 0.22), fundo = vec3(0.20, 0.14, 0.07);
+        vec3 topo = uTopo, meio = uMeio, hor = uHor;
+        vec3 nuvem = uNuvem, fundo = uFundo;
         float H = 0.56;
         if (y > H) c = mix(hor, mix(meio, topo, smoothstep(0.75, 1.0, y)), smoothstep(H, 0.8, y));
         else c = mix(fundo, nuvem, smoothstep(0.0, H, y));
@@ -166,7 +259,7 @@ function criarCeu(jogo) {
         // nuvens altas deslizando
         float n = fbm(vec2(u * 3.0 + uGiro * 2.0 + uTempo * 0.01, y * 7.0));
         float faixa = smoothstep(0.62, 0.95, y) * step(0.58 + d * 0.12, n);
-        c = mix(c, vec3(0.62, 0.45, 0.2), faixa * 0.5);
+        c = mix(c, uFaixa, faixa * 0.5);
         // camadas do horizonte (texturas panorâmicas de 1440 x 120 texels)
         // camadas do horizonte (texturas panorâmicas de 1440 x 120 texels)
         float vl = (y - 0.47) / 0.45;
@@ -183,8 +276,19 @@ function criarCeu(jogo) {
         float m = fbm(vec2(u * 5.0 - uGiro * 3.0 + uTempo * 0.015, y * 14.0));
         float mar = (1.0 - smoothstep(0.42, 0.56, y + (m - 0.5) * 0.12));
         float cr = step(0.5 + d * 0.15, m);
-        vec3 corMar = mix(vec3(0.56, 0.42, 0.21), vec3(0.78, 0.62, 0.34), cr);
+        vec3 corMar = mix(uMarA, uMarB, cr);
         c = mix(c, mix(corMar, fundo, smoothstep(0.35, 0.0, y)), mar);
+        // dossel (Seiva): folhagem escura cobrindo o alto, com frestas de luz e raios caindo
+        if (uDossel > 0.5) {
+          float f = fbm(vec2(u * 6.0 - uGiro * 4.0 + sin(uTempo * 0.2) * 0.02, y * 9.0));
+          float cob = smoothstep(0.66, 0.9, y + (f - 0.5) * 0.35);
+          vec3 folha = mix(vec3(0.04, 0.08, 0.03), vec3(0.12, 0.22, 0.08), step(0.55 + d * 0.1, f));
+          c = mix(c, folha, cob);
+          float fresta = step(0.78 + d * 0.06, fbm(vec2(u * 11.0 - uGiro * 4.0, y * 17.0))) * cob;
+          c = mix(c, vec3(0.78, 0.86, 0.5), fresta * 0.6);
+          float raio = pow(max(0.0, sin(u * 9.0 - uGiro * 6.0 + y * 1.5)), 24.0) * smoothstep(0.35, 0.8, y) * (1.0 - cob);
+          c += vec3(0.35, 0.42, 0.2) * raio * 0.35 * step(d, 0.8);
+        }
         gl_FragColor = vec4(pow(c, vec3(2.2)), 1.0);
         #include <colorspace_fragment>
       }`,

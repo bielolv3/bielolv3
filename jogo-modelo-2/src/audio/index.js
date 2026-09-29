@@ -67,6 +67,7 @@ export function instalarAudio(jogo) {
     morte: () => { ruido(0.45, { freq: 900, ate: 120, tipo: 'lowpass', vol: 0.25 }); tom(110, 0.4, { tipo: 'sine', ate: 35, vol: 0.25 }); },
     derrota: () => arpejo([220, 174.6, 146.8, 110], 0.18, { tipo: 'triangle', vol: 0.14 }),
     pulo: () => tom(300, 0.12, { tipo: 'square', ate: 560, vol: 0.06 }),
+    pouso: (f) => { ruido(0.09, { freq: 260, tipo: 'lowpass', vol: Math.min(0.2, 0.05 + f * 0.012) }); },
     troca: (m) => {
       const f = { hugo: 196, chico: 392, orlando: 294 }[m] ?? 300;
       tom(f, 0.07, { tipo: 'square', vol: 0.07 }); tom(f * 1.5, 0.09, { tipo: 'square', vol: 0.06, atraso: 0.06 });
@@ -177,6 +178,7 @@ export function instalarAudio(jogo) {
   ev.on('alerta', () => tocar('alerta'));
   ev.on('vitoria', () => tocar('vitoria'));
   ev.on('pulo', () => tocar('pulo'));
+  ev.on('pouso', ({ forca = 0 } = {}) => { if (forca > 6) tocar('pouso', forca); });
   ev.on('pausa', ({ pausado }) => abafar(pausado));
   ev.on('sala', ({ sala, indice }) => {
     salaAtual = sala; salaIndice = indice;

@@ -1,5 +1,6 @@
 // HUD: macacos (retratos 1/2/3), vida, Surto, bananas, nome da sala e dicas.
 import { icones } from './pixel.js';
+import { instalarHudReliquias } from './reliquias.js';
 
 const BASE = import.meta.env.BASE_URL;
 const ORDEM = [['hugo', '1'], ['chico', '2'], ['orlando', '3']];
@@ -48,6 +49,7 @@ export function criarHud(jogo, raiz) {
     <div class="chefe"><div class="rotulo"></div><div class="barra"><i></i></div></div>
     <div class="dica"></div>`;
   raiz.appendChild(el);
+  instalarHudReliquias(jogo, el);   // relíquia ativa, recarga e cerimônia
 
   const $ = (s) => el.querySelector(s);
   const retratos = [...el.querySelectorAll('.retrato')];

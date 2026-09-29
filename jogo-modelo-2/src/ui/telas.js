@@ -25,9 +25,27 @@ const MODELOS = {
       <div class="marca">Hills Co</div>
       <p class="lema">Três macacos de rua procuravam Atlântida. Acharam um santuário de embarque — e uma máquina que ainda funciona.</p>
       <div class="fio"></div>
-      <div class="acoes"><button class="botao principal" data-acao="jogar">Jogar</button></div>
+      <div class="acoes acoes-titulo"><button class="botao principal" data-acao="jogar">Jogar</button></div>
       ${CONTROLES}
       <div class="dica-tecla so-teclado">Enter para começar</div>
+    </div>`,
+  salas: `
+    <div class="caixa">
+      <h1 class="menor">SALAS</h1>
+      <p class="lema">as câmaras que vocês já abriram</p>
+      <div class="fio"></div>
+      <div class="lista-salas"></div>
+      <div class="acoes"><button class="botao" data-acao="voltar">Voltar</button></div>
+    </div>`,
+  confirmar: `
+    <div class="caixa">
+      <h1 class="menor">NOVO JOGO</h1>
+      <p class="lema">Começar do zero apaga as salas abertas e as relíquias guardadas.</p>
+      <div class="fio"></div>
+      <div class="acoes">
+        <button class="botao" data-acao="confirmarNovo">Apagar e começar</button>
+        <button class="botao principal" data-acao="voltar">Voltar</button>
+      </div>
     </div>`,
   pausa: `
     <div class="caixa">
@@ -38,6 +56,8 @@ const MODELOS = {
         <button class="botao principal" data-acao="continuar">Continuar</button>
         <button class="botao" data-acao="reiniciar">Reiniciar sala</button>
         <button class="botao" data-acao="som">Som</button>
+        <button class="botao" data-acao="numeros">Números de dano</button>
+        <button class="botao" data-acao="menu">Menu</button>
       </div>
       ${CONTROLES}
     </div>`,
@@ -85,6 +105,30 @@ export function criarTelas(raiz, aoAcionar) {
     rotuloSom(mudo) {
       const b = telas.pausa.querySelector('[data-acao="som"]');
       b.textContent = mudo ? 'Som: desligado' : 'Som: ligado';
+    },
+    rotuloNumeros(sim) {
+      telas.pausa.querySelector('[data-acao="numeros"]').textContent = sim ? 'Números: sim' : 'Números: não';
+    },
+    // botões do título conforme o progresso salvo; `salas` = [{ indice, nome }]
+    atualizarTitulo(temProgresso, salas, salaMax) {
+      const acoes = telas.titulo.querySelector('.acoes-titulo');
+      acoes.innerHTML = temProgresso
+        ? `<button class="botao principal" data-acao="retomar">Continuar</button>
+           <button class="botao" data-acao="salas">Seleção de salas</button>
+           <button class="botao" data-acao="novo">Novo jogo</button>`
+        : '<button class="botao principal" data-acao="jogar">Jogar</button>';
+      const lista = telas.salas.querySelector('.lista-salas');
+      lista.innerHTML = '';
+      for (const s of salas) {
+        const b = document.createElement('button');
+        b.className = 'botao sala-item' + (s.indice === salaMax ? ' principal' : '');
+        b.dataset.acao = 'sala:' + s.indice;
+        const n = document.createElement('span'); n.className = 'n'; n.textContent = String(s.indice + 1).padStart(2, '0');
+        b.append(n, s.nome);
+        lista.appendChild(b);
+      }
+      const d = telas.titulo.querySelector('.dica-tecla');
+      if (d) d.textContent = temProgresso ? 'Enter para continuar' : 'Enter para começar';
     },
   };
 }

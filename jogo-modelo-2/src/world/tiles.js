@@ -19,6 +19,14 @@ export const TIPOS_CHAO = {
   '%': { nome: 'circuito', altura: 0.5 },        // plataforma Quanta baixa
   'c': { nome: 'coluna', altura: 2.5, solido: true, forma: 'coluna' },   // coluna Precursora inteira
   'k': { nome: 'coluna', altura: 1.25, forma: 'coluna' },                // coluna quebrada (dá para subir pulando)
+  // Ato II (bioma Seiva): floresta, raízes e água
+  'r': { nome: 'terra', altura: 0 },                                     // chão de terra e folhas
+  'u': { nome: 'terra', altura: 1 },                                     // barranco de terra (sobe pulando)
+  'y': { nome: 'terra', altura: 2 },                                     // barranco alto (Chico: pulo duplo)
+  't': { nome: 'raiz', altura: 3, solido: true },                        // raiz colossal: parede do bioma
+  'z': { nome: 'raizViva', altura: 0.2, protegido: true },               // raiz viva da Matriarca: pisar provoca
+  'w': { nome: 'aguaRasa', altura: -0.2, lento: 0.55 },                  // água rasa: anda mais devagar
+  'o': { nome: 'aguaFunda', altura: -4, vazio: true, agua: true },       // água funda: cai = volta (como o abismo)
 };
 
 // Coisas: o jogo cria a entidade registrada com essa letra (ver src/entities/registro.js)
@@ -40,6 +48,17 @@ export const LEGENDA_COISAS = {
   'V': 'droneVigia',    // Drone Vigia (Legião): voa, alerta os outros
   'K': 'droneConstrutor', // Drone Construtor (Quanta): reergue selos
   'W': 'andador',       // Andador Quanta (chefe)
+  // Relíquias: pedestal; qual relíquia vem do campo `reliquia` da sala ('sismico' | 'disco' | 'semente' | 'perola')
+  'Y': 'reliquia',
+  // Ato II: fauna nativa do veio Seiva (src/entities/fauna.js). Não ataca primeiro.
+  'J': 'javali',        // Javali-raiz: investe em linha se provocado ou se entrarem no território
+  'F': 'planta',        // Planta-carnívora: parada, morde quem chega perto; banana distrai
+  'H': 'sapo',          // Sapo-bombástico: pula e explode em área quando provocado
+  'E': 'aranha',        // Aranha-gigante: guarda ninhos, tece teia que prende
+  'U': 'tartaruga',     // Tartaruga-menor: neutra, empurrável, nada na água (plataforma móvel)
+  'N': 'ninho',         // ninho: pisar provoca a fauna em volta
+  'I': 'insetoLuz',     // Inseto-luz: vaga-lume inofensivo (ilumina)
+  'Z': 'matriarca',     // A Matriarca (colosso do veio Seiva): só reage
 };
 
 // Camada opcional `deco` (Frente B): só visual, sem colisão. Mesma grade de `chao`.
@@ -55,4 +74,10 @@ export const LEGENDA_DECO = {
   'b': 'braseiro',      // braseiro aceso (3D, luz quente, chama animada)
   'h': 'elmo',          // destroço da Legião Cinzenta (sprite)
   'v': 'cipo',          // cipó pendurado (use em tile de parede; cai pela face da frente)
+  // Ato II (bioma Seiva)
+  'i': 'raizArco',      // raiz retorcida saindo do chão (3D)
+  'j': 'arbusto',       // arbusto de folhas largas (sprite)
+  'm': 'cogumelo',      // cogumelos luminosos (3D, luz verde)
+  'y': 'flores',        // flores (sprite)
+  'x': 'vitoria',       // vitória-régia (use sobre água)
 };

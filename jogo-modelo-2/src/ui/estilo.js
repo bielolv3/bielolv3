@@ -95,7 +95,7 @@ body.toque .dica{bottom:auto;top:84px}
 .tela .lema{font-family:var(--texto);font-style:italic;font-size:18px;color:var(--osso2);margin:18px auto 0;max-width:460px;line-height:1.45}
 .tela .fio{width:200px;height:2px;margin:22px auto;background:linear-gradient(90deg,transparent,var(--mostarda),transparent)}
 .tela .acoes{display:flex;flex-direction:column;gap:8px;align-items:center;margin-top:8px}
-#hud .botao{pointer-events:auto;width:250px;max-width:100%;padding:10px 18px;background:var(--tinta);border:2px solid var(--osso2);
+#hud .botao{pointer-events:auto;width:280px;max-width:100%;padding:10px 18px;background:var(--tinta);border:2px solid var(--osso2);
   font-family:var(--serifa)!important;font-weight:700;font-size:17px;letter-spacing:.2em;text-transform:uppercase}
 #hud .botao.principal{border-color:var(--mostarda);color:var(--mostarda);box-shadow:4px 4px 0 var(--apagado)}
 #hud .botao:hover,#hud .botao:focus-visible{background:var(--mostarda);color:var(--tinta);border-color:var(--mostarda);outline:none}
@@ -103,6 +103,11 @@ body.toque .dica{bottom:auto;top:84px}
   font-size:12px;color:var(--osso2);text-align:left}
 .controles kbd{font-family:var(--mono);color:var(--osso);border:1px solid var(--apagado);padding:0 4px;margin-right:2px;font-size:11px}
 .tela .dica-tecla{font-size:11px;color:var(--osso2);margin-top:14px;letter-spacing:.1em}
+.lista-salas{display:flex;flex-direction:column;gap:6px;align-items:center;max-height:52vh;overflow:auto;margin-bottom:12px;padding:2px}
+.acoes-titulo .botao{width:300px!important}
+#hud .botao.sala-item{display:flex;gap:12px;align-items:baseline;text-align:left;width:320px;font-size:14px;letter-spacing:.12em}
+#hud .botao.sala-item .n{font-family:var(--mono);font-size:11px;color:var(--osso2);letter-spacing:.1em}
+#hud .botao.sala-item:hover .n,#hud .botao.sala-item:focus-visible .n{color:var(--tinta)}
 .tela-derrota h1{color:var(--brasa)}
 .tela-vitoria h1{color:var(--quanta)}
 body.toque .so-teclado{display:none}
@@ -136,6 +141,12 @@ body.toque .toque-camada{display:block}
 @keyframes treme{33%{transform:translateX(-2px)}66%{transform:translateX(2px)}}
 @keyframes surge{from{opacity:0}}
 @media (max-height:480px){
+  .tela{place-items:start center}
+  .tela .caixa{margin:auto 0}
+  .tela .acoes{display:grid;grid-template-columns:repeat(2,minmax(0,220px));justify-content:center}
+  .tela .acoes .botao:only-child{grid-column:1 / -1;justify-self:center}
+  #hud .botao{width:auto;padding:8px 12px;font-size:14px}
+  .lista-salas{max-height:none}
   .tela h1{font-size:44px}
   .tela h1.menor{font-size:36px}
   .tela .lema{font-size:15px;margin-top:8px}
@@ -146,5 +157,31 @@ body.toque .toque-camada{display:block}
 @media (max-width:560px){
   .hud-topo .sala{display:none}
   .surto .barra{width:80px}
+  .hud-canto{left:10px;top:10px;padding:5px 8px 5px 5px;gap:7px}
+  .hud-topo{right:10px;top:10px}
+  .tela .lema{font-size:16px}
+  .acoes-titulo .botao{width:290px!important}
+#hud .botao.sala-item{width:100%}
+}
+/* celular deitado: HUD mais compacto, botões de toque menores */
+@media (max-height:480px) and (orientation:landscape){
+  .hud-canto{left:10px;top:8px;padding:4px 8px 4px 4px}
+  .retrato.ativo{width:42px;height:42px}
+  .retrato{width:24px;height:24px}
+  .status{gap:3px}
+  .titulo-sala{top:24%;padding:8px 16px}
+  .titulo-sala h2{font-size:26px}
+  body.toque .dica{top:auto;bottom:12px;max-width:44vw}
+  body.toque .chefe{top:10px;width:min(34vw,300px)}
+  body.toque .hud-topo .sala{display:none}
+  .bt.girar{top:50px}
+}
+/* celular em pé: botões de ação e joystick no terço de baixo; dica acima deles */
+@media (orientation:portrait) and (max-width:560px){
+  body.toque .dica{top:auto;bottom:230px;max-width:calc(100vw - 32px)}
+  body.toque .chefe{top:auto;bottom:228px}
+  body.toque .titulo-sala{top:22%}
+  .joystick{width:50%;height:45%}
+  .joystick .base{left:90px}
 }
 `;

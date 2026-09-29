@@ -596,6 +596,7 @@ export class InsetoLuz extends Entidade {
     this.posto = this.pos.clone();
     this.t = Math.random() * 10;
     this.sprite = criarSpriteInimigo('inseto');
+    this.semLuz = true;   // brilha sozinho
     this.objeto.add(this.sprite);
     if (!texBrilhoInseto) {
       const c = document.createElement('canvas'); c.width = c.height = 16;

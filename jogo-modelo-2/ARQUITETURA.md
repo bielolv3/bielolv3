@@ -88,7 +88,13 @@ Animações: `parado, andar, correr, pulo, queda, pouso, golpe, identidade, dano
 segurar, planar, rugido`. A máquina de estados fica em `Jogador.escolherQuadro` (vista pela
 direção relativa à câmera, luz pelo lado do sol na tela). Com `this.quadros = true` a
 deformação procedural de `Entidade.animarSprite` só tempera (squash leve, sem bob).
-Guardião e Acólito também têm quadros (`ANIMADOS` / `animarInimigo` em `fx/sprites.js`).
+Inimigos e fauna também têm quadros (`ANIMADOS` / `animarInimigo` em `fx/sprites.js`): Guardião,
+Acólito, Sentinela, Bruto, Drone, Torre, Andador, Javali, Sapo, Aranha e Planta (andar/parado,
+preparo, golpe logo após o preparo, investida, ar).
+Luz nos sprites: `Entidade.iluminar` (chamado em `sincronizar`) multiplica o sprite pelo uniform
+`uLuz` = sol ou sombra do bioma (`jogo.luzSprites`, montado em `world/ambiente.js`; sombra = parede
+alta entre a entidade e o sol, 3 amostras no tilemap) + PointLights da sala com a mesma queda.
+Vem antes do flash branco e da cor fixa (silhueta); `semLuz = true` desliga (vaga-lume).
 Conferência: `node scripts/exportar-macacos.mjs` gera `referencias/folha-macacos.png` e os
 atlas em `referencias/macacos/`. Os PNGs de `public/sprites/` seguem como retratos do HUD.
 

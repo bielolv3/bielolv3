@@ -37,3 +37,4 @@ Para republicar: `npm run build && node scripts/pagina-artifact.mjs` e publicar 
 | 29/09 | 3 | US$ 27,71 | Revisão (10 bugs), playtest com bot (8 salas ok), sala 8 nova, chefe rebalanceado; republicado v2 |
 | 29/09 | 4 | US$ 46,52 | Relíquias (4×3), Ato II (salas 9–12, fauna, bioma Seiva), polimento (animação procedural, hit-stop, progresso salvo) |
 | 29/09 | 4b | US$ 54,10 | Macacos redesenhados na escala dos tiles com 43 quadros × 2 direções × 2 formas; Guardião e Acólito animados; 12 salas ok no bot; republicado v3 |
+| 29/09 | 5 | US$ 57,49 | Luz da sala nos sprites, 9 inimigos/fauna animados, 12 salas ok, resumo para o GPT; publicado v4 (final desta rodada) |

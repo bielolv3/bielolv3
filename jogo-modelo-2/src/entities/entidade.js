@@ -38,6 +38,7 @@ export function animarMaterial(mat) {
     uBranco: { value: 0 },
     uCorFixa: { value: new THREE.Vector4(0, 0, 0, 0) },
     uPontilhado: { value: 0 },   // 1 = xadrez (silhueta atrás das coisas)
+    uLuz: { value: new THREE.Color(1, 1, 1) },   // luz da sala no sprite (Entidade.iluminar)
   };
   mat.userData.anim = u;
   mat.side = THREE.DoubleSide;   // espelhado, o quadrado vira de costas
@@ -46,9 +47,10 @@ export function animarMaterial(mat) {
     sh.vertexShader = 'uniform vec2 uDeform; uniform float uInclina; uniform vec2 uDesloc; uniform float uEspelho;\n'
       + sh.vertexShader.replace('vec2 rotatedPosition;',
         'alignedPosition *= uDeform;\n\talignedPosition.x = alignedPosition.x * uEspelho + alignedPosition.y * uInclina;\n\talignedPosition += uDesloc;\n\tvec2 rotatedPosition;');
-    sh.fragmentShader = 'uniform float uBranco; uniform vec4 uCorFixa; uniform float uPontilhado;\n'
+    sh.fragmentShader = 'uniform float uBranco; uniform vec4 uCorFixa; uniform float uPontilhado; uniform vec3 uLuz;\n'
       + sh.fragmentShader.replace('#include <tonemapping_fragment>',
         'if (uPontilhado > 0.5 && mod(floor(gl_FragCoord.x * 0.5) + floor(gl_FragCoord.y * 0.5), 2.0) < 1.0) discard;\n\t' +
+        'gl_FragColor.rgb *= uLuz;\n\t' +
         'gl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(1.0, 0.97, 0.9), uBranco);\n\tgl_FragColor.rgb = mix(gl_FragColor.rgb, uCorFixa.rgb, uCorFixa.a);\n\t#include <tonemapping_fragment>');
   };
   mat.customProgramCacheKey = () => 'spriteAnimado';
@@ -57,6 +59,9 @@ export function animarMaterial(mat) {
 }
 
 const _dirTela = new THREE.Vector3();
+const _dirSol = new THREE.Vector3();
+const BRANCO = new THREE.Color(1, 1, 1);
+const AMOSTRAS_SOMBRA = [0.5, 0.9, 1.4];
 const amortecer = (atual, alvo, taxa, dt) => atual + (alvo - atual) * (1 - Math.exp(-taxa * dt));
 
 // Base de tudo que se move/interage. Contrato usado pelo jogo:
@@ -149,6 +154,39 @@ export class Entidade {
     this.sombra.position.y = this.jogo.mapa.alturaEm(this.pos.x, this.pos.z) - this.pos.y + 0.01;
     if (this.sprite) this.sprite.material.opacity = this.invulneravel > 0 && Math.floor(this.invulneravel * 20) % 2 ? 0.4 : 1;
     this.animarSprite(dt);
+    this.iluminar(dt);
+  }
+
+  // Luz da sala no sprite: sol ou sombra (parede alta entre a entidade e o sol, 3
+  // amostras no tilemap) + PointLights próximas (braseiros, cristais, cogumelos) com a
+  // mesma queda da PointLight. Vai para o uniform uLuz (antes do flash e da cor fixa).
+  iluminar(dt) {
+    const L = this.jogo.luzSprites, s = this.sprite;
+    if (!L || !s || this.semLuz) return;
+    const u = animarMaterial(s.material);
+    if (!L.pontos) {
+      L.pontos = [];
+      L.cena.traverse((o) => { if (o.isPointLight) L.pontos.push({ luz: o, p: o.getWorldPosition(new THREE.Vector3()) }); });
+    }
+    const sol = this.jogo.sol, mapa = this.jogo.mapa;
+    let sombra = 0;
+    if (sol && mapa) {
+      _dirSol.subVectors(sol.position, sol.target.position);
+      const hz = Math.hypot(_dirSol.x, _dirSol.z) || 1, tg = _dirSol.y / hz, y0 = this.pos.y + 0.5;
+      for (const d of AMOSTRAS_SOMBRA) if (mapa.alturaEm(this.pos.x + _dirSol.x / hz * d, this.pos.z + _dirSol.z / hz * d) > y0 + tg * d) sombra += 1 / AMOSTRAS_SOMBRA.length;
+    }
+    this._sombraSol = dt > 0 && this._sombraSol !== undefined ? amortecer(this._sombraSol, sombra, 8, dt) : sombra;
+    const c = u.uLuz.value.copy(L.sol).lerp(L.ambiente, this._sombraSol);
+    const cy = this.pos.y + 0.6;
+    for (const { luz, p } of L.pontos) {
+      if (!luz.visible || luz.intensity <= 0 || !luz.distance) continue;
+      const d = Math.max(0.55, Math.hypot(p.x - this.pos.x, p.y - cy, p.z - this.pos.z));
+      if (d >= luz.distance) continue;
+      const k = (1 - (d / luz.distance) ** 4) ** 2 / d ** luz.decay * luz.intensity * 0.16;
+      c.r += luz.color.r * k; c.g += luz.color.g * k; c.b += luz.color.b * k;
+    }
+    if (this.surto?.ativo > 0) c.lerp(BRANCO, 0.5);   // Surto brilha por conta própria
+    c.setRGB(Math.min(c.r, 1.6), Math.min(c.g, 1.6), Math.min(c.b, 1.6));
   }
 
   // flash branco (entidade atingida)

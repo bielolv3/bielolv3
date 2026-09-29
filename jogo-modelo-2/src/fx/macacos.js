@@ -676,7 +676,7 @@ export function folhaDeContato(escala = 2, porLinha = 15) {
     }
     y += 6;
   }
-  texto('Humanoides animados (fx/sprites.js): andar, preparo, golpe.', 4, y + 6, '#e9e1cf');
+  texto('Inimigos e fauna animados (fx/sprites.js): andar, parado, preparo, golpe, investida, ar.', 4, y + 6, '#e9e1cf');
   y += 24;
   for (const Hm of hum) {
     const nomeDe = {};

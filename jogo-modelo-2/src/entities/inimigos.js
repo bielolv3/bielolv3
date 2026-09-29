@@ -136,7 +136,7 @@ export class Inimigo extends Entidade {
 
   atualizarVisual(dt = 0) {
     if (!this.sprite) return;
-    animarInimigo(this, dt);   // quadros (só Guardião/Acólito têm; os outros ignoram)
+    animarInimigo(this, dt);   // quadros (tipos em ANIMADOS de fx/sprites.js; os outros ignoram)
     // tonto: balança; preparando: avermelha pulsando
     this.sprite.material.rotation = this.atordoado > 0 ? Math.sin(this.t * 14) * 0.25 : 0;
     const pulso = this.preparo > 0 ? 0.5 + 0.5 * Math.sin(this.t * 30) : 0;

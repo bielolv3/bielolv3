@@ -187,7 +187,194 @@ function acolitoPose(t, p = {}) {
   }
 }
 
-// tipo -> [largura, altura, centroX (px), { animação: [poses] }, desenho(t, pose)]
+// Sentinela: canhão no braço direito. Mira = canhão erguido e olho aceso; tiro = recuo + clarão.
+function sentinelaPose(t, p = {}) {
+  const by = p.by ?? 0, [a, b] = p.pes ?? [[0, 0], [0, 0]], rc = p.tiro ? -1 : 0;
+  const perna = (x, [dx, lev]) => { const y0 = 32 + by; t.re(x + dx, y0, 3, 43 - lev - y0, ACO, 1); };
+  perna(8, a); perna(13, b);
+  t.re(3 + rc, 14 + by + (p.braco ?? 0), 3, 12, ACO, 2);                            // braço de trás
+  t.re(6 + rc, 12 + by, 12, 21, ACO, 2); t.el(12 + rc, 18 + by, 5, 5, ACO);
+  t.re(8 + rc, 24 + by, 8, 2, ACO, 1);
+  t.el(12 + rc, 7 + by, 4, 5, ACO);
+  const r = p.mira ? (p.brilho ? 2.2 : 1.9) : 1.6;
+  t.el(12 + rc, 7 + by, r, r, p.mira ? [BRASA[2], BRASA[3], '#fff4e0'] : [BRASA[1], BRASA[2], BRASA[3]]);
+  if (p.mira || p.tiro) {                                                           // canhão erguido à frente
+    t.re(16 + rc * 2, 14 + by, 9, 4, ACO, 3);
+    const boca = p.brilho || p.tiro ? BRASA[3] : BRASA[2];
+    t.set(24 + rc * 2, 15 + by, boca); t.set(24 + rc * 2, 16 + by, BRASA[1]);
+    if (p.tiro) { t.el(26.5, 15.5 + by, 2.6, 2.6, [BRASA[1], BRASA[2], BRASA[3], '#fff4e0']); t.set(29, 15 + by, BRASA[2]); }
+  } else {
+    t.re(17, 16 + by - (p.braco ?? 0), 7, 4, ACO, 3); t.set(23, 17 + by - (p.braco ?? 0), BRASA[2]); t.set(23, 18 + by - (p.braco ?? 0), BRASA[1]);
+  }
+}
+
+// Bruto: passo pesado (afunda no apoio), preparo com os punhos erguidos, investida inclinada.
+function brutoPose(t, p = {}) {
+  const by = p.by ?? 0, [a, b] = p.pes ?? [[0, 0], [0, 0]], [pl, pr] = p.punho ?? [0, 0], ln = p.ln ?? 0;
+  const perna = (x, [dx, lev]) => { const y0 = 44 + by; t.re(x + dx, y0, 8, 60 - lev - y0, ACO, 1); };
+  perna(12, a); perna(24, b);
+  const visor = p.aviso ? [BRASA[1], BRASA[2], BRASA[3]] : [BRASA[0], BRASA[1], BRASA[2]];
+  if (p.erguer) {                                                                   // punhos acima da cabeça
+    t.re(2, 12 + by, 8, 16, ACO, 2); t.re(34, 12 + by, 8, 16, ACO, 2);
+    t.el(22, 30 + by, 15, 15, ACO);
+    t.el(8, 22 + by, 8, 7, ACO); t.el(36, 22 + by, 8, 7, ACO);
+    t.el(22, 16 + by, 6, 6, ACO); t.re(18, 16 + by, 9, 2, visor, 1);
+    t.el(7, 9 + by, 6, 5, ACO); t.el(37, 9 + by, 6, 5, ACO);
+  } else if (p.investida) {                                                         // corpo à frente, punhos adiante
+    t.re(2 + ln, 28 + by, 8, 12, ACO, 2);
+    t.el(22 + ln, 30 + by, 15, 14, ACO);
+    t.el(10 + ln, 23 + by, 8, 7, ACO); t.el(36 + ln, 24 + by, 8, 7, ACO);
+    t.el(29 + ln, 20 + by, 6, 6, ACO); t.re(26 + ln, 20 + by, 9, 2, visor, 1);
+    t.re(34 + ln, 30 + by, 10, 8, ACO, 2); t.el(45, 35 + by, 5, 5, ACO); t.el(43, 42 + by, 5, 4.5, ACO);
+  } else {
+    t.el(22, 30 + by, 15, 15, ACO);
+    t.el(8, 22 + by, 8, 7, ACO); t.el(36, 22 + by, 8, 7, ACO);
+    t.re(2, 26 + by + pl, 8, 16, ACO, 2); t.re(34, 26 + by + pr, 8, 16, ACO, 2);
+    t.el(6, 45 + by + pl, 6, 5, ACO); t.el(38, 45 + by + pr, 6, 5, ACO);
+    t.el(22, 14 + by, 6, 6, ACO); t.re(18, 14 + by, 9, 2, visor, 1);
+  }
+  t.re(14 + ln, 36 + by, 16, 3, ACO, 1);
+}
+
+// Drone vigia: hélice girando (2 quadros) e olho que pulsa no preparo.
+function dronePose(t, p = {}) {
+  const h = p.helice ?? 0;
+  t.re(1, 11, 5, 2, ACO, 2); t.re(16, 11, 5, 2, ACO, 2);
+  t.el(11, 13, 7.5, 7.5, ACO);
+  const r = p.aviso ? (p.brilho ? 4.2 : 3.8) : 3.5;
+  t.el(11, 13, r, r, p.brilho ? [BRASA[1], BRASA[2], BRASA[3], '#fff4e0'] : [BRASA[0], BRASA[1], BRASA[2], BRASA[3]]);
+  t.linha(11, 3, 11, 5, ACO[2]);
+  if (h) { t.linha(8, 2, 14, 2, ACO[3]); t.set(11, 2, ACO[4]); }
+  else { t.linha(3, 2, 19, 2, ACO[2]); t.linha(5, 1, 17, 1, ACO[4]); }
+}
+
+// Torre: núcleo teal que respira; na sobrecarga incha, solta faíscas e o orbe cresce.
+function torrePose(t, p = {}) {
+  const k = p.carga ?? 0, pulso = p.pulso ?? 0, X = 2;
+  t.re(3 + X, 48, 22, 9, ACO, 2); t.re(5 + X, 44, 18, 5, ACO, 3);
+  t.re(8 + X, 14, 12, 31, ACO, 1);
+  for (let y = 18; y < 42; y += 2) t.set(14 + X, y, QUANTA[Math.min(4, 2 + (y % 4 ? 0 : 1) + (k && (y >> 1) % 3 === pulso % 3 ? 1 : 0))]);
+  t.el(14 + X, 30, 3 + k * 0.6, 5 + k * 0.6, k ? QUANTA.slice(1) : QUANTA);
+  t.re(4 + X, 10, 20, 5, ACO, 3);
+  const r = 5 + k * 0.8;
+  t.el(14 + X, 6, r, r, pulso % 2 ? QUANTA.slice(1) : QUANTA); t.set(13 + X, 5, QUANTA[4]); t.set(14 + X, 5, QUANTA[4]);
+  if (k) {                                                                           // arcos de sobrecarga
+    const faisca = [[1, 8, 3, 12], [27, 7, 30, 11], [2, 26, 5, 23], [26, 28, 29, 25], [4, 40, 1, 37], [25, 39, 29, 36]];
+    faisca.forEach(([x0, y0, x1, y1], i) => { if ((i + pulso) % 2) t.linha(x0, y0, x1, y1, i % 3 ? QUANTA[3] : QUANTA[4]); });
+  } else if (pulso) t.set(14 + X, 30, QUANTA[4]);
+}
+
+// Andador: quatro pernas em pares alternados; preparo agacha e acende o olho; no ar recolhe.
+function andadorPose(t, p = {}) {
+  const by = p.by ?? 0, lev = p.lev ?? [0, 0, 0, 0], abre = p.abre ?? 0;
+  const pernas = [[14, -1], [28, -1], [46, 1], [60, 1]];
+  pernas.forEach(([x, s], i) => {
+    const l = lev[i], jx = x + s * (8 + abre), jy = 30 + by - Math.round(l * 0.4), px = x + s * (12 + abre) - s * Math.round(l * 0.3), py = 80 - l;
+    t.linha(x, 42 + by, jx, jy, ACO[2]); t.linha(x + 1, 42 + by, jx + 1, jy, ACO[3]);
+    t.linha(jx, jy, px, py, ACO[1]); t.linha(jx + 1, jy, px + 1, py, ACO[2]);
+    t.el(px, py - 1, 3, 2, ACO);
+  });
+  t.el(37, 42 + by, 26, 13, ['#1d2a2c', '#2d3e3f', '#465b5a', '#6a8583', '#8fb0ad']);
+  t.re(22, 47 + by, 30, 3, [QUANTA[1], QUANTA[2], QUANTA[3]], p.aviso ? 2 : 1);
+  t.el(37, 26 + by, 9, 7, ['#1d2a2c', '#2d3e3f', '#465b5a', '#6a8583']);
+  const r = p.aviso ? 4.3 : 3.5;
+  t.el(37, 27 + by, r, r, QUANTA); t.set(37, 26 + by, QUANTA[4]); if (p.brilho) t.el(37, 27 + by, 1.6, 1.6, [QUANTA[4]]);
+  t.linha(44, 20 + by, 50, 8 + by, ACO[2]); t.el(50, 7 + by, p.aviso ? 2.6 : 2, p.aviso ? 2.6 : 2, QUANTA);
+}
+
+// ---- fauna (virada para a ESQUERDA da tela)
+// Javali: trote (patas em diagonal), preparo (cabeça baixa, cavando), investida (galope esticado).
+function javaliPose(t, p = {}) {
+  const by = p.by ?? 0, pt = p.patas ?? [[0, 0], [0, 0], [0, 0], [0, 0]], cb = p.cab ?? 0;
+  if (p.galope) {                                                                  // patas em tesoura
+    const g = p.galope > 1;
+    for (const [x0, x1] of g ? [[11, 6], [18, 14], [29, 35], [35, 41]] : [[11, 9], [18, 20], [29, 26], [35, 37]]) {
+      t.linha(x0, 20 + by, x1, 28, PELO[2]); t.linha(x0 + 1, 20 + by, x1 + 1, 28, PELO[3]); t.linha(x0 + 2, 20 + by, x1 + 2, 28, PELO[2]);
+    }
+  } else {
+    [[10, 20], [17, 21], [28, 21], [34, 20]].forEach(([x, y], i) => { const [dx, lev] = pt[i]; t.re(x + dx, y + by, 4, 29 - lev - y - by, PELO, 1); });
+  }
+  t.el(24, 16 + by, 16, 9, PELO);                                                   // corpo
+  t.el(9, 17 + by + cb, 8, 6.5, PELO);                                               // cabeça
+  t.el(3, 19 + by + cb, 3, 2.5, ['#5a3828', '#7a4a38', '#9a6a58']);                  // focinho
+  t.set(2, 19 + by + cb, TINTA); t.set(4, 19 + by + cb, TINTA);
+  t.linha(5, 21 + by + cb, 2, 16 + by + cb, OSSO); t.linha(6, 21 + by + cb, 3, 17 + by + cb, OSSO);   // presa
+  const olho = p.aviso ? '#ff5a3a' : '#ffd24a';
+  t.set(9, 14 + by + cb, olho); t.set(10, 14 + by + cb, olho);
+  t.el(12, 10 + by + cb, 2, 3, PELO);                                               // orelha
+  for (let x = 14; x < 38; x += 3) t.linha(x, 8 + by + ((x * 7) % 3), x + 1, 3 + by + ((x * 5) % 4), FOLHA[2 + (x % 3)]);
+  t.el(24, 9 + by, 10, 2.5, FOLHA);                                                 // musgo no lombo
+  t.linha(40, 14 + by, 43, 12 + by - (p.rabo ?? 0), PELO[2]);                       // rabo
+  if (p.poeira) for (const [x, y] of [[p.poeira > 1 ? 16 : 14, 28], [19, 27], [p.poeira > 1 ? 13 : 21, 26]]) t.set(x, y, '#9a8a6a');
+}
+
+// Sapo: papo que respira, pulo esticado, papo inflado no preparo (a escala faz o resto).
+function sapoPose(t, p = {}) {
+  const pp = p.papo ?? 0;
+  if (p.ar) {                                                                       // no ar: corpo esticado, pernas para trás
+    t.linha(17, 12, 24, 17, PELE[2]); t.linha(18, 12, 25, 16, PELE[3]); t.linha(16, 13, 22, 18, PELE[1]);
+    t.el(5, 13, 3, 1.5, PELE);
+    t.el(12, 9, 9, 5.5, CARNE); t.el(14, 7, 6.5, 2.8, PELE);
+    t.el(7, 11, 3.5, 2.2, ['#c07a3a', '#e8b060', '#ffd890']);
+    t.el(6, 4, 3, 3, CARNE); t.el(12, 3, 3, 3, CARNE);
+    t.set(6, 4, TINTA); t.set(12, 3, TINTA); t.set(5, 3, OSSO); t.set(11, 2, OSSO);
+    for (const [x, y] of [[15, 6], [19, 8], [12, 8]]) t.set(x, y, '#ffd24a');
+    return;
+  }
+  t.el(19, 16, 5, 3, PELE); t.el(6, 17, 4, 2.5, PELE);                              // patas
+  t.el(13, 12, 10, 7, p.aviso ? CARNE.slice(1) : CARNE);                            // corpo
+  t.el(15, 9, 7, 3.5, PELE);                                                        // costas verdes
+  t.el(7, 15 - pp * 0.5, 4.5 + pp, 3 + pp * 0.7, ['#c07a3a', '#e8b060', '#ffd890']);   // papo
+  t.el(6, 6, 3, 3, CARNE); t.el(12, 5, 3, 3, CARNE);                                // olhos saltados
+  t.set(6, 6, TINTA); t.set(12, 5, TINTA); t.set(5, 5, OSSO); t.set(11, 4, OSSO);
+  for (const [x, y] of [[16, 8], [20, 10], [13, 10]]) t.set(x, y, p.aviso && p.brilho ? '#fff0b0' : '#ffd24a');
+}
+
+// Aranha: patas em dois grupos alternados; preparo ergue as patas da frente; bote avança as quelíceras.
+function aranhaPose(t, p = {}) {
+  const ga = p.ga ?? 0, gb = p.gb ?? 0, er = p.ergue ?? 0, bote = p.bote ? -2 : 0;
+  const PATAS = [[16, 16, 6, 6, 1, 28, 0, 1], [18, 17, 10, 8, 7, 29, 1, 0], [26, 17, 34, 8, 38, 29, 0, 0], [28, 16, 40, 6, 45, 28, 1, 0],
+    [17, 18, 9, 14, 3, 22, 1, 1], [27, 18, 36, 14, 43, 22, 0, 0], [20, 18, 14, 20, 12, 29, 0, 0], [24, 18, 30, 20, 32, 29, 1, 0]];
+  for (const [x0, y0, x1, y1, x2, y2, g, frente] of PATAS) {
+    const d = g ? gb : ga, lev = Math.abs(d) > 1 ? 2 : 0;
+    let X2 = x2 + d, Y2 = y2 - lev, Y1 = y1 - lev;
+    if (frente && er) { X2 = x2 - 1 + bote; Y2 = y2 - 12 - (frente && x2 < 5 ? 2 : 0); Y1 = y1 - 4; }
+    t.linha(x0 + bote, y0, x1 + bote, Y1, QUITINA[2]); t.linha(x1 + bote, Y1, X2, Y2, QUITINA[1]); t.linha(x1 + 1 + bote, Y1, X2 + 1, Y2, QUITINA[3]);
+  }
+  t.el(31, 13 - (er ? 1 : 0), 10, 8, QUITINA);                                     // abdômen
+  for (let x = 25; x < 40; x += 4) t.linha(x, 7 - (er ? 1 : 0), x + 1, 20 - (er ? 1 : 0), QUITINA[5]);
+  t.el(17 + bote, 16, 6, 5, QUITINA);                                              // cefalotórax
+  const ol = p.aviso ? '#ff8a6a' : '#ff4a3a';
+  t.set(13 + bote, 14, ol); t.set(15 + bote, 13, ol); t.set(14 + bote, 16, ol); t.set(12 + bote, 16, '#c02a20');
+  if (p.bote) { t.linha(11 + bote, 19, 8 + bote, 23, QUITINA[0]); t.linha(14 + bote, 19, 12 + bote, 24, QUITINA[0]); t.set(8 + bote, 24, OSSO); t.set(12 + bote, 25, OSSO); }
+  else { t.linha(11, 19, 10, 22, QUITINA[0]); t.linha(14, 19, 14, 22, QUITINA[0]); }
+}
+
+// Planta: balança parada; preparo abre a boca (mandíbula de cima sobe); mordida fecha avançando.
+function plantaPose(t, p = {}) {
+  const sw = p.sw ?? 0, ab = p.abre ?? 0, av = p.morde ? -4 : 0, hx = 15 + sw + av;
+  t.linha(15, 39, 15 + Math.round((sw + av) * 0.5), 26, FOLHA[3]); t.linha(16, 39, 16 + Math.round((sw + av) * 0.5), 26, FOLHA[2]);
+  t.linha(15 + Math.round((sw + av) * 0.5), 26, hx, 18, FOLHA[3]); t.linha(16 + Math.round((sw + av) * 0.5), 26, hx + 1, 18, FOLHA[2]);
+  t.el(8, 34, 7, 3, FOLHA); t.el(23, 32, 7, 3, FOLHA);                              // folhas no pé
+  if (ab) {                                                                          // boca aberta
+    t.el(hx, 17, 12, 6, CARNE);                                                      // mandíbula de baixo
+    t.el(hx, 7 - ab, 12, 7, CARNE);                                                  // de cima
+    for (let x = hx - 9; x <= hx + 9; x++) for (let y = 12 - ab; y <= 14; y++) if (Math.abs(x - hx) < 10 - (y > 13 ? 1 : 0)) t.set(x, y, y < 13 - ab + 1 ? CARNE[0] : '#2a0608');
+    for (let x = hx - 9; x <= hx + 9; x += 3) { t.set(x, 13 - ab, OSSO); t.set(x + 1, 14 - ab, OSSO); t.set(x + 1, 14, OSSO); t.set(x, 13, OSSO); }
+    for (const [x, y] of [[-6, 3 - ab], [3, 2 - ab], [7, 5 - ab], [-3, 18], [5, 18]]) { t.set(hx + x, y, OSSO); t.set(hx + x + 1, y, '#f0d0c0'); }
+  } else {
+    t.el(hx, 12, 12, 10, CARNE);                                                     // cabeça fechada
+    for (let x = hx - 10; x <= hx + 10; x += 3) { t.set(x, 12, OSSO); t.set(x + 1, 13, OSSO); }
+    t.linha(hx - 11, 12, hx + 11, 12, CARNE[0]);
+    for (const [x, y] of [[-6, 6], [3, 5], [7, 9], [-3, 18], [5, 17]]) { t.set(hx + x, y, OSSO); t.set(hx + x + 1, y, '#f0d0c0'); }
+  }
+  t.el(hx, 23, 5, 2, FOLHA);                                                         // colarinho
+}
+
+// tipo -> [largura, altura, centroX (px), { animação: [poses] }, desenho(t, pose), opções]
+// Animações: andar (passo pela distância), parado (tempo, `fps`), preparo (ent.preparo > 0),
+// golpe (animarGolpe ou logo após o preparo), investida (ent.investida > 0), ar (fora do chão).
+// opções.esquerda: desenhado para a esquerda (fauna; quem vira o sprite é Fauna.atualizarVisual).
 const ANIMADOS = {
   guardiao: [44, 42, 15, {
     andar: [{}, { by: -1, pes: [[-1, 1], [1, 0]], braco: 1 }, {}, { by: -1, pes: [[1, 0], [-1, 1]], braco: -1 }],
@@ -198,26 +385,67 @@ const ANIMADOS = {
     andar: [{}, { by: -1, passo: -1 }, {}, { by: -1, passo: 1 }],
     preparo: [{ conjura: true }, { conjura: true, brilho: true }],
   }, acolitoPose],
+  sentinela: [30, 44, 12, {
+    andar: [{}, { by: -1, pes: [[-1, 2], [1, 0]], braco: 1 }, {}, { by: -1, pes: [[1, 0], [-1, 2]], braco: -1 }],
+    preparo: [{ mira: true }, { mira: true, brilho: true }],
+    golpe: [{ tiro: true, mira: true }],
+  }, sentinelaPose],
+  bruto: [50, 62, 22, {
+    andar: [{ by: 1 }, { pes: [[-1, 3], [0, 0]], punho: [-2, 2] }, { by: 1 }, { pes: [[0, 0], [1, 3]], punho: [2, -2] }],
+    preparo: [{ erguer: true, aviso: true, by: 2 }, { erguer: true, aviso: true, by: 1 }],
+    investida: [{ investida: true, aviso: true, ln: 4, by: 1, pes: [[-2, 0], [3, 3]] }, { investida: true, aviso: true, ln: 4, by: 2, pes: [[2, 3], [-2, 0]] }],
+  }, brutoPose],
+  drone: [22, 24, 11, {
+    parado: [{}, { helice: 1 }],
+    preparo: [{ aviso: true }, { aviso: true, helice: 1, brilho: true }],
+  }, dronePose, { fps: 14 }],
+  torre: [32, 58, 16, {
+    parado: [{}, { pulso: 1 }],
+    preparo: [{ carga: 1, pulso: 0 }, { carga: 1, pulso: 1 }, { carga: 2, pulso: 2 }],
+  }, torrePose, { fps: 2 }],
+  andador: [74, 82, 37, {
+    andar: [{}, { by: -1, lev: [5, 0, 0, 5] }, {}, { by: -1, lev: [0, 5, 5, 0] }],
+    preparo: [{ by: 4, aviso: true }, { by: 4, aviso: true, brilho: true }],
+    ar: [{ by: -2, lev: [10, 10, 10, 10], abre: -2 }],
+  }, andadorPose],
+  javali: [44, 30, 22, {
+    andar: [{}, { by: -1, patas: [[-1, 2], [0, 0], [0, 0], [-1, 2]], rabo: 1 }, {}, { by: -1, patas: [[0, 0], [-1, 2], [-1, 2], [0, 0]], rabo: 1 }],
+    preparo: [{ cab: 2, aviso: true, patas: [[0, 0], [2, 1], [0, 0], [0, 0]], poeira: 1 }, { cab: 2, aviso: true, patas: [[0, 0], [-1, 0], [0, 0], [0, 0]], poeira: 2, rabo: 2 }],
+    investida: [{ galope: 1, cab: 1, aviso: true }, { galope: 2, cab: 1, by: -1, aviso: true, rabo: 2 }],
+  }, javaliPose, { esquerda: true }],
+  sapo: [26, 20, 13, {
+    parado: [{}, { papo: 1 }],
+    preparo: [{ papo: 2, aviso: true }, { papo: 2.5, aviso: true, brilho: true }],
+    ar: [{ ar: true }],
+  }, sapoPose, { esquerda: true, fps: 2.5 }],
+  aranha: [46, 30, 23, {
+    andar: [{}, { ga: -2, gb: 1 }, {}, { ga: 1, gb: -2 }],
+    preparo: [{ ergue: 1, aviso: true }, { ergue: 1, aviso: true, ga: 1 }],
+    golpe: [{ ergue: 1, bote: true, aviso: true }],
+  }, aranhaPose, { esquerda: true }],
+  planta: [30, 40, 15, {
+    parado: [{}, { sw: 1 }, {}, { sw: -1 }],
+    preparo: [{ abre: 3 }, { abre: 4, sw: 1 }],
+    golpe: [{ morde: true }],
+  }, plantaPose, { esquerda: true, fps: 2 }],
 };
-DESENHOS.guardiao[2] = (t) => guardiaoPose(t);
-DESENHOS.acolito[2] = (t) => acolitoPose(t);
 
 const cacheAnim = new Map();
 function faixaAnimada(tipo) {
   if (cacheAnim.has(tipo)) return cacheAnim.get(tipo);
-  const [w, h, cx, anims, desenho] = ANIMADOS[tipo];
+  const [w, h, cx, anims, desenho, op = {}] = ANIMADOS[tipo];
   const lista = [], indice = {};
   for (const [an, ps] of Object.entries(anims)) ps.forEach((p) => { (indice[an] ??= []).push(lista.length); lista.push(p); });
   const c = document.createElement('canvas');
   c.width = w * lista.length; c.height = h;
   const g = c.getContext('2d');
   lista.forEach((p, k) => { const t = new Tela(w, h); desenho(t, p); t.contorno(); g.drawImage(t.canvas(), k * w, 0); });
-  const f = { canvas: c, w, h, cx, n: lista.length, indice };
+  const f = { canvas: c, w, h, cx, n: lista.length, indice, esquerda: !!op.esquerda, fps: op.fps ?? 3 };
   cacheAnim.set(tipo, f);
   return f;
 }
 
-// faixas dos humanoides animados (para a folha de contato em fx/macacos.js)
+// faixas dos inimigos/fauna animados (para a folha de contato em fx/macacos.js)
 export function faixasHumanoides() { return Object.keys(ANIMADOS).map((tipo) => ({ tipo, ...faixaAnimada(tipo) })); }
 
 // Sprite animado: textura própria (clone que compartilha a imagem) para trocar o quadro.
@@ -233,26 +461,36 @@ function criarSpriteAnimado(ent, tipo, escala) {
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, alphaTest: 0.5 }));
   s.center.set(f.cx / f.w, 0);
   s.scale.set(f.w / 32 * escala, f.h / 32 * escala, 1);
-  ent._animI = { f, tex, fase: 0, t: 0 };
+  ent._animI = { f, tex, fase: 0, t: 0, tipo };
   ent.quadros = true;   // Entidade.animarSprite atenua a deformação procedural
   return s;
 }
 
 const _dir = new THREE.Vector3();
-// Escolhe o quadro do inimigo animado: golpe > preparo > andar (passo pela distância).
-// Chamado por Inimigo.atualizarVisual. Vira o sprite para o lado do jogador ao atacar.
+// Escolhe o quadro do inimigo animado: golpe > investida > preparo > ar > andar > parado.
+// "golpe" vale no animarGolpe ou logo depois de o preparo acabar (tiro, mordida, bote).
+// Chamado por Inimigo.atualizarVisual. Vira o sprite para o lado do jogador ao atacar
+// (fauna, desenhada para a esquerda, é virada por Fauna.atualizarVisual).
 export function animarInimigo(ent, dt) {
   const A = ent._animI, s = ent.sprite;
   if (!A || !s) return;
   A.t += dt;
   const { f } = A;
+  if ((A.prep ?? 0) > 0 && ent.preparo <= 0 && ent.atordoado <= 0) A.pos = 0.22;
+  A.prep = ent.preparo;
+  A.pos = Math.max(0, (A.pos ?? 0) - dt);
   const h = Math.hypot(ent.vel.x, ent.vel.z);
   let an = 'andar', i = 0;
-  if ((ent._anim?.golpe ?? 0) > 0 && f.indice.golpe) an = 'golpe';
+  if (((ent._anim?.golpe ?? 0) > 0 || A.pos > 0) && f.indice.golpe) an = 'golpe';
+  else if (ent.mastigando > 0 && f.indice.golpe) an = Math.floor(A.t * 7) % 2 ? 'golpe' : 'parado';
+  else if (ent.investida > 0 && f.indice.investida) { an = 'investida'; i = Math.floor(A.t * 10); }
   else if (ent.preparo > 0 && ent.atordoado <= 0) { an = 'preparo'; i = Math.floor(A.t * 8); }
-  else if (h > 0.25 && ent.noChao !== false) { A.fase += h * dt / 1.1; i = Math.floor(A.fase * 4); }
-  const lst = f.indice[an] ?? f.indice.andar;
+  else if (f.indice.ar && ent.noChao === false && !ent.voa) an = 'ar';
+  else if (f.indice.andar && h > 0.25 && ent.noChao !== false) { A.fase += h * dt / 1.1; i = Math.floor(A.fase * 4); }
+  else if (f.indice.parado) { an = 'parado'; i = Math.floor(A.t * f.fps); }
+  const lst = f.indice[an] ?? f.indice.andar ?? f.indice.parado;
   A.tex.offset.x = lst[i % lst.length] / f.n;
+  if (f.esquerda) return;
   // lado: para onde anda ou, atacando, para o jogador
   const cam = ent.jogo.camera?.cam, j = ent.jogo.jogador;
   if (!cam) return;
@@ -408,3 +646,5 @@ Object.assign(DESENHOS, {
   }],
 });
 TIPOS_INIMIGO.push('javali', 'planta', 'sapo', 'aranha', 'tartaruga', 'inseto', 'ninho', 'matriarca');
+// quadro 0 dos animados também serve de sprite estático (mesmas medidas)
+for (const [tipo, [w, h, , , desenho]] of Object.entries(ANIMADOS)) DESENHOS[tipo] = [w, h, (t) => desenho(t)];

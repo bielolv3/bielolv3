@@ -21,12 +21,15 @@ const BIOMAS = {
     // gradiente do céu (sRGB 0..1): topo, meio, horizonte, nuvem, fundo, faixa, mar escuro/claro
     grad: [[0.16, 0.11, 0.05], [0.42, 0.29, 0.12], [0.80, 0.58, 0.24], [0.62, 0.46, 0.22], [0.20, 0.14, 0.07], [0.62, 0.45, 0.2], [0.56, 0.42, 0.21], [0.78, 0.62, 0.34]],
     dossel: 0, faseColosso: 0.17,
+    // luz dos sprites (Entidade.iluminar): sol direto e sombra/ambiente
+    luzSol: 0xfff2dc, luzSombra: 0xa08a70,
   },
   seiva: {
     fundo: 0x14200f, nevoa: 0x4a6a3c, perto: 26, longe: 70, nevoaAltura: 0x2f4a2a,
     ceu: 0xd8f0b0, chao: 0x2a3418, hemi: 1.75, sol: 0xf0f4b8, forcaSol: 2.7,
     grad: [[0.05, 0.09, 0.04], [0.18, 0.30, 0.13], [0.62, 0.72, 0.38], [0.42, 0.56, 0.32], [0.08, 0.14, 0.07], [0.30, 0.44, 0.2], [0.34, 0.46, 0.28], [0.56, 0.68, 0.44]],
     dossel: 1, faseColosso: 0.36,   // Matriarca à esquerda do céu na vista inicial
+    luzSol: 0xe4f4c4, luzSombra: 0x6e8a62,
   },
 };
 
@@ -50,6 +53,9 @@ export function montarAmbiente(jogo) {
   Object.assign(sol.shadow.camera, { left: -15, right: 15, top: 15, bottom: -15, near: 1, far: 50 });
   cena.add(sol, sol.target);
   jogo.sol = sol;
+  // luz que os sprites (billboards sem iluminação) recebem; as PointLights da sala
+  // são coletadas na primeira consulta (Entidade.iluminar)
+  jogo.luzSprites = { sol: new THREE.Color(B.luzSol), ambiente: new THREE.Color(B.luzSombra), pontos: null, cena: cena };
 
   cena.add(criarCeu(jogo, B, bioma));
 }

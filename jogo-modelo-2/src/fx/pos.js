@@ -6,17 +6,16 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 
 // Pós-processamento: bloom discreto (só o que brilha de verdade: Quanta, chamas),
-// desfoque de miniatura em cima/embaixo (tilt-shift HD-2D), vinheta, vinheta do
-// Surto e flash de dano. Liga em jogo.posProcesso; o loop chama render(dt).
+// desfoque de miniatura em cima/embaixo (tilt-shift HD-2D) e vinheta.
+// Liga em jogo.posProcesso; o loop chama render(dt). Em renderizador por software
+// (SwiftShader/llvmpipe) começa desligado, por custo; `?pos=1` na URL força ligar.
+// Surto e flash de dano ficam numa camada DOM (tela.js), que funciona sempre.
 
 const Final = {
   uniforms: {
     tDiffuse: { value: null },
     uRes: { value: new THREE.Vector2(1280, 720) },
     uVinheta: { value: 0.32 },
-    uSurto: { value: 0 },
-    uFlash: { value: 0 },
-    uFlashCor: { value: new THREE.Color(0xc04a2c) },
     uTilt: { value: 1 },
     uTempo: { value: 0 },
   },
@@ -24,7 +23,7 @@ const Final = {
     varying vec2 vUv;
     void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
   fragmentShader: /* glsl */`
-    uniform sampler2D tDiffuse; uniform vec2 uRes; uniform float uVinheta, uSurto, uFlash, uTilt, uTempo; uniform vec3 uFlashCor;
+    uniform sampler2D tDiffuse; uniform vec2 uRes; uniform float uVinheta, uTilt, uTempo;
     varying vec2 vUv;
     void main() {
       vec4 c = texture2D(tDiffuse, vUv);
@@ -42,13 +41,6 @@ const Final = {
       vec2 d2 = (vUv - 0.5) * vec2(uRes.x / uRes.y, 1.0);
       float d = length(d2);
       c.rgb *= 1.0 - uVinheta * smoothstep(0.45, 1.1, d);
-      // Surto: borda escura/vermelha que pulsa
-      float pulso = 0.85 + 0.15 * sin(uTempo * 6.0);
-      float vs = smoothstep(0.35, 1.0, d) * uSurto * pulso;
-      c.rgb = mix(c.rgb, vec3(0.16, 0.012, 0.004), vs * 0.85);
-      c.rgb += vec3(0.05, 0.0, 0.0) * uSurto * smoothstep(0.2, 0.9, d);
-      // flash (dano no jogador etc.)
-      c.rgb = mix(c.rgb, uFlashCor, uFlash * (0.25 + 0.75 * smoothstep(0.2, 1.0, d)));
       gl_FragColor = c;
     }`,
 };
@@ -74,21 +66,25 @@ export function criarPosProcesso(jogo) {
   redimensionar();
 
   const u = final.uniforms;
+  const forcar = new URLSearchParams(location.search).get('pos');
   return {
     composer, bloom, final,
-    surto: 0,        // alvo 0..1 da vinheta do surto
-    flash: 0,
-    ativo: true,
+    ativo: forcar ? forcar !== '0' : !renderizadorSoftware(r),
     render(dt = 1 / 60) {
       if (!this.ativo) { r.render(jogo.cena, jogo.camera.cam); return; }
       passCena.scene = jogo.cena;
       passCena.camera = jogo.camera.cam;
       u.uTempo.value += dt;
-      u.uSurto.value += (this.surto - u.uSurto.value) * (1 - Math.exp(-dt * 5));
-      this.flash = Math.max(0, this.flash - dt * 3);
-      u.uFlash.value = this.flash;
       composer.render(dt);
     },
-    piscar(cor = 0xc04a2c, forca = 0.35) { u.uFlashCor.value.set(cor); this.flash = Math.max(this.flash, forca); },
   };
+}
+
+export function renderizadorSoftware(r) {
+  try {
+    const gl = r.getContext();
+    const ext = gl.getExtension('WEBGL_debug_renderer_info');
+    const nome = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+    return /swiftshader|llvmpipe|software/i.test(nome);
+  } catch { return false; }
 }

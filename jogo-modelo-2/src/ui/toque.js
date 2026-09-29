@@ -1,7 +1,7 @@
 // Controles de toque: joystick à esquerda (-> input.eixoToque) e botões de ação à
 // direita (-> input.pressionar/soltar). Só aparecem em dispositivo de toque.
-const ROTULOS_ID = { hugo: 'Pulv.', chico: 'Banana', orlando: 'Agarrar' };
-const ROTULOS_REC = { hugo: 'Guarda', chico: '—', orlando: 'Ferram.' };
+const ROTULOS_ID = { hugo: 'Pulv.', chico: 'Banana', orlando: 'Agarr.' };
+const ROTULOS_REC = { hugo: 'Guarda', chico: '—', orlando: 'Ferr.' };
 
 export function ehToque() {
   return new URLSearchParams(location.search).has('toque')

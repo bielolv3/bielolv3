@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Particulas } from './particulas.js';
 import { criarPosProcesso } from './pos.js';
+import { criarTela } from './tela.js';
 import { aproximarDaCamera } from '../world/visual.js';
 
 // Frente B: efeitos visuais (partículas, flashes, pós-processamento) como sistema.
@@ -26,7 +27,11 @@ export function instalarEfeitos(jogo) {
   const poeira = new Particulas(700, false);
   const transientes = [];   // { obj, t, dur, fn(obj, k) }
   let pos = null;
+  const tela = criarTela(jogo);
   try { pos = criarPosProcesso(jogo); jogo.posProcesso = pos; } catch (e) { console.warn('pós-processamento desligado', e); }
+
+  // acesso para testes/console
+  jogo.fx = { faiscas, poeira, tela };
 
   const addTransiente = (obj, dur, fn) => { jogo.cena.add(obj); transientes.push({ obj, t: 0, dur, fn }); };
 
@@ -68,7 +73,7 @@ export function instalarEfeitos(jogo) {
     poeira.emitir({ pos: p, n: 5, cor: COR.poeira, vel: 1.5, vida: 0.4, tam: 0.1, grav: -1 });
     piscarSprite(d.alvo);
     jogo.camera.tremer(ehJogador ? 0.25 : 0.15);
-    if (ehJogador) pos?.piscar(COR.brasa, 0.35);
+    if (ehJogador) tela.piscar('#c04a2c', 0.35);
   });
 
   ev.on('morte', (d) => {
@@ -98,7 +103,7 @@ export function instalarEfeitos(jogo) {
     const q = p.clone(); q.y += 0.7;
     faiscas.emitir({ pos: q, n: 50, cor: COR.brasa, cor2: COR.mostarda, vel: 6, subir: 0.6, vida: 0.6, tam: 0.08, grav: 2 });
     anel(p, COR.brasa, 3, 0.5);
-    pos?.piscar(COR.mostarda, 0.4);
+    tela.piscar('#d09a2c', 0.4);
     jogo.camera.tremer(0.3);
   });
 
@@ -110,7 +115,7 @@ export function instalarEfeitos(jogo) {
   };
   ev.on('selo', (d) => teal(d, d?.quebrado !== false));
   ev.on('porta', (d) => teal(d, false));
-  ev.on('parry', (d) => { const p = posDe(d); if (p) { p.y += 0.6; faiscas.emitir({ pos: p, n: 20, cor: 0xffffff, cor2: COR.quantaClara, vel: 6, vida: 0.25, tam: 0.06 }); pos?.piscar(0xffffff, 0.2); } });
+  ev.on('parry', (d) => { const p = posDe(d); if (p) { p.y += 0.6; faiscas.emitir({ pos: p, n: 20, cor: 0xffffff, cor2: COR.quantaClara, vel: 6, vida: 0.25, tam: 0.06 }); tela.piscar('#ffffff', 0.2); } });
   ev.on('quebra', (d) => { const p = posDe(d); if (p) { p.y += 0.4; poeira.emitir({ pos: p, n: 22, cor: 0x7a5a34, cor2: COR.pedra, vel: 4, subir: 1.2, vida: 0.7, tam: 0.1, grav: 14, arrasto: 0.5 }); } });
   ev.on('cura', (d) => { const p = posDe(d); if (p) faiscas.emitir({ pos: p, n: 16, cor: COR.seiva, cor2: 0xc8e090, vel: 1, espalha: 0.35, subir: 1.5, vida: 0.9, tam: 0.07, grav: -2 }); });
   ev.on('coleta', () => { const p = jogo.jogador?.pos; if (p) { const q = p.clone(); q.y += 0.8; faiscas.emitir({ pos: q, n: 16, cor: COR.mostarda, cor2: COR.osso, vel: 2.5, vida: 0.5, tam: 0.06, grav: -1 }); } });
@@ -141,7 +146,8 @@ export function instalarEfeitos(jogo) {
       // sprites das entidades: puxados para a câmera no depth (não entram na parede de trás)
       for (const e of j.entidades) if (e.sprite && !e.sprite.userData.aproximado) aproximarDaCamera(e.sprite, 0.6);
       // vinheta do surto segue o estado do jogador também
-      if (pos) pos.surto = (surtoEvento || j.jogador?.surto?.ativo > 0) ? 1 : 0;
+      tela.surto = (surtoEvento || j.jogador?.surto?.ativo > 0) ? 1 : 0;
+      tela.atualizar(dt);
     },
   });
 }

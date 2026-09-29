@@ -84,7 +84,7 @@ body.toque .chefe{bottom:auto;top:132px}
 body.toque .dica{bottom:auto;top:84px}
 
 /* telas (título, pausa, derrota, vitória) */
-.tela{position:absolute;inset:0;display:none;place-items:center;pointer-events:auto;padding:16px;
+.tela{position:absolute;inset:0;display:none;place-items:center;pointer-events:auto;padding:16px;overflow:auto;
   background:radial-gradient(ellipse at 50% 45%,rgba(12,11,9,.55),rgba(12,11,9,.93) 70%)}
 .tela.visivel{display:grid;animation:surge .4s ease-out}
 .tela .caixa{text-align:center;max-width:620px;width:100%}
@@ -95,7 +95,7 @@ body.toque .dica{bottom:auto;top:84px}
 .tela .lema{font-family:var(--texto);font-style:italic;font-size:18px;color:var(--osso2);margin:18px auto 0;max-width:460px;line-height:1.45}
 .tela .fio{width:200px;height:2px;margin:22px auto;background:linear-gradient(90deg,transparent,var(--mostarda),transparent)}
 .tela .acoes{display:flex;flex-direction:column;gap:8px;align-items:center;margin-top:8px}
-#hud .botao{pointer-events:auto;min-width:220px;padding:10px 18px;background:var(--tinta);border:2px solid var(--osso2);
+#hud .botao{pointer-events:auto;width:250px;max-width:100%;padding:10px 18px;background:var(--tinta);border:2px solid var(--osso2);
   font-family:var(--serifa)!important;font-weight:700;font-size:17px;letter-spacing:.2em;text-transform:uppercase}
 #hud .botao.principal{border-color:var(--mostarda);color:var(--mostarda);box-shadow:4px 4px 0 var(--apagado)}
 #hud .botao:hover,#hud .botao:focus-visible{background:var(--mostarda);color:var(--tinta);border-color:var(--mostarda);outline:none}
@@ -119,14 +119,14 @@ body.toque .toque-camada{display:block}
 .joystick.ativo .base{opacity:1}
 .botoes-toque{position:absolute;right:14px;bottom:18px;width:210px;height:190px;pointer-events:none}
 .bt{position:absolute;pointer-events:auto;touch-action:none;border-radius:50%;border:2px solid rgba(233,225,207,.45);
-  background:rgba(12,11,9,.55);color:var(--osso);display:grid;place-items:center;font-size:9px;letter-spacing:0;overflow:hidden;
-  text-transform:uppercase;padding:0;font-family:var(--mono)}
+  background:rgba(12,11,9,.55);color:var(--osso);display:grid;place-items:center;font-size:8px;letter-spacing:0;overflow:hidden;
+  padding:0;font-family:var(--mono)}
 .bt.apertado{background:var(--mostarda);color:var(--tinta);border-color:var(--mostarda)}
 .bt.pulo{width:78px;height:78px;right:0;bottom:0;font-size:11px;border-color:var(--osso)}
 .bt.golpe{width:62px;height:62px;right:88px;bottom:6px}
 .bt.identidade{width:58px;height:58px;right:12px;bottom:88px}
-.bt.recurso{width:50px;height:50px;right:84px;bottom:80px}
-.bt.surto{width:46px;height:46px;right:150px;bottom:92px;opacity:.45}
+.bt.recurso{width:54px;height:54px;right:82px;bottom:78px}
+.bt.surto{width:50px;height:50px;right:148px;bottom:92px;opacity:.45}
 .bt.surto.pronto{opacity:1;border-color:var(--brasa);color:var(--brasa)}
 .bt.girar{width:38px;height:38px;border-radius:0;top:56px;font-size:18px;letter-spacing:0}
 .bt.girar-esq{right:58px}
@@ -135,6 +135,14 @@ body.toque .toque-camada{display:block}
 @keyframes pulso{50%{opacity:.45}}
 @keyframes treme{33%{transform:translateX(-2px)}66%{transform:translateX(2px)}}
 @keyframes surge{from{opacity:0}}
+@media (max-height:480px){
+  .tela h1{font-size:44px}
+  .tela h1.menor{font-size:36px}
+  .tela .lema{font-size:15px;margin-top:8px}
+  .tela .fio{margin:10px auto}
+  .controles{margin-top:10px}
+  .titulo-sala{top:22%}
+}
 @media (max-width:560px){
   .hud-topo .sala{display:none}
   .surto .barra{width:80px}

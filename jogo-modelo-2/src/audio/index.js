@@ -10,7 +10,6 @@ export function instalarAudio(jogo) {
   let mudo = false;
   try { mudo = localStorage.getItem(CHAVE_MUDO) === '1'; } catch {}
   let salaAtual = null, salaIndice = 0;
-  let ultimoVelY = 0, temEventoPulo = false;
 
   function destravar() {
     if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
@@ -177,22 +176,12 @@ export function instalarAudio(jogo) {
   ev.on('parry', () => tocar('parry'));
   ev.on('alerta', () => tocar('alerta'));
   ev.on('vitoria', () => tocar('vitoria'));
-  ev.on('pulo', () => { temEventoPulo = true; tocar('pulo'); });
+  ev.on('pulo', () => tocar('pulo'));
   ev.on('pausa', ({ pausado }) => abafar(pausado));
   ev.on('sala', ({ sala, indice }) => {
     salaAtual = sala; salaIndice = indice;
     tocar('sala');
     iniciarDrone(sala, indice);
-  });
-
-  // pulo detectado pela velocidade, enquanto a Frente A não emitir 'pulo'
-  jogo.adicionarSistema({
-    atualizar() {
-      const j = jogo.jogador;
-      if (!j || temEventoPulo) return;
-      if (j.vel.y > 5 && j.vel.y - ultimoVelY > 4) tocar('pulo');
-      ultimoVelY = j.vel.y;
-    },
   });
 
   jogo.audio = {

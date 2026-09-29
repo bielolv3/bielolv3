@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Entidade } from './entidade.js';
 import { DEGRAU, moverCorpo } from '../world/fisica.js';
 import { Projetil, Onda, controleExterno } from './projeteis.js';
+import { aplicarSpriteInimigo } from '../fx/sprites.js';
 
 // Legião Cinzenta (cinza-azulado) e Quanta (teal). Números do Códice.
 const COR_LEGIAO = 0x8b94a0;
@@ -53,7 +54,7 @@ export class Inimigo extends Entidade {
   }
 
   // Frente B pode trocar por sprite definitivo
-  montarVisual() { this.definirPlaceholder(COR_LEGIAO, 0.7, this.altura); }
+  montarVisual() { aplicarSpriteInimigo(this, 'guardiao'); }
 
   atordoar(t) {
     if (this.resisteAtordoar) t *= 0.4;
@@ -196,7 +197,7 @@ export class Sentinela extends Inimigo {
     this.pesado = true;
     this.recargaAtaque = 1;
   }
-  montarVisual() { this.definirPlaceholder(0x6f7885, 0.6, 1.3); }
+  montarVisual() { aplicarSpriteInimigo(this, 'sentinela'); }
 
   pensar(dt) {
     const alvo = this.jogo.jogador;
@@ -226,7 +227,7 @@ export class Bruto extends Inimigo {
     this.investida = 0;
     this.dirInvestida = new THREE.Vector3();
   }
-  montarVisual() { this.definirPlaceholder(0x767f8c, 1.3, 1.9); }
+  montarVisual() { aplicarSpriteInimigo(this, 'bruto'); }
 
   pensar(dt) {
     const alvo = this.jogo.jogador;
@@ -303,7 +304,7 @@ export class DroneVigia extends Voador {
     super(jogo, x, z, { vida: 2, raio: 0.3, faccao: 'legiao', altura: 0.6 });
     this.viu = false;
   }
-  montarVisual() { this.definirPlaceholder(0x9aa3ae, 0.6, 0.6); }
+  montarVisual() { aplicarSpriteInimigo(this, 'drone'); }
 
   pensar(dt) {
     const alvo = this.jogo.jogador;
@@ -343,7 +344,7 @@ export class Acolito extends Inimigo {
     this.recargaTele = 0;
     this.recargaAtaque = 1.5;
   }
-  montarVisual() { this.definirPlaceholder(COR_QUANTA, 0.6, 1.3); }
+  montarVisual() { aplicarSpriteInimigo(this, 'acolito'); }
 
   pensar(dt) {
     const alvo = this.jogo.jogador;
@@ -399,7 +400,7 @@ export class Torre extends Inimigo {
     this.recargaAtaque = 1;
   }
   montarVisual() {
-    this.definirPlaceholder(0x3d8c91, 0.8, 1.8);
+    aplicarSpriteInimigo(this, 'torre');
     // anel no chão marca o raio de defesa
     this.anelRaio = new THREE.Mesh(
       new THREE.RingGeometry(5.9, 6, 48).rotateX(-Math.PI / 2),
@@ -435,7 +436,7 @@ export class DroneConstrutor extends Voador {
     super(jogo, x, z, { vida: 3, raio: 0.3, faccao: 'quanta', altura: 0.6 });
     this.canal = 0;
   }
-  montarVisual() { this.definirPlaceholder(0x6cc3c7, 0.6, 0.6); }
+  montarVisual() { aplicarSpriteInimigo(this, 'construtor'); }
 
   pensar(dt) {
     const alvo = this.jogo.jogador;
@@ -480,7 +481,13 @@ export class Andador extends Inimigo {
     this.aceleracao = 4;
     jogo.eventos.emitir('chefe', { alvo: this });
   }
-  montarVisual() { this.definirPlaceholder(0x2f7d82, 2.2, 2.5); }
+  // a queda do chefe abre as portas da arena
+  morrer() {
+    super.morrer();
+    for (const e of this.jogo.entidades) if (e.ehPorta) e.abrir();
+  }
+
+  montarVisual() { aplicarSpriteInimigo(this, 'andador'); }
 
   mudar(estado, t) { this.estado = estado; this.tEstado = t; }
 

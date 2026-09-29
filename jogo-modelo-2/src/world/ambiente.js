@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { rngSemente } from './texturas.js';
 import { U, atualizarVisual } from './visual.js';
+import { renderizadorSoftware } from '../fx/pos.js';
 
 // Luz, céu, névoa e fundo (Tartaruga-Mundo no horizonte) da sala. Cria `jogo.sol`
 // (DirectionalLight com sombra), que o loop reposiciona para seguir o jogador.
@@ -19,7 +20,8 @@ export function montarAmbiente(jogo) {
   const sol = new THREE.DirectionalLight(0xffdca6, 3.4);
   sol.position.set(8, 16, 4);
   sol.castShadow = true;
-  sol.shadow.mapSize.set(2048, 2048);
+  const res = renderizadorSoftware(jogo.renderer) ? 1024 : 2048;
+  sol.shadow.mapSize.set(res, res);
   sol.shadow.bias = -0.0006;
   sol.shadow.normalBias = 0.02;
   Object.assign(sol.shadow.camera, { left: -15, right: 15, top: 15, bottom: -15, near: 1, far: 50 });
@@ -72,7 +74,7 @@ function desenharLonge(g, r) {
 function desenharColosso(g, r) {
   const CORPO = '#6b5433', LUZ = '#8c6e42', SOMBRA = '#56432a', MATA = '#5c5a30', MATA_L = '#707040', AGUA = '#c9b98a';
   // Tartaruga-Mundo: casco em cúpula, patas, cabeça à esquerda
-  const cx = 360, base = 96, rx = 230, ry = 62;
+  const cx = 300, base = 92, rx = 150, ry = 50;
   for (let x = -rx; x <= rx; x++) {
     const h = Math.sqrt(1 - (x / rx) ** 2) * ry;
     ret(g, cx + x, base - h, 1, h + 4, x > rx * 0.35 ? SOMBRA : CORPO);
@@ -83,17 +85,17 @@ function desenharColosso(g, r) {
   for (let x = -rx + 10; x < rx - 10; x += 2) if (Math.abs(Math.sin(x * 0.05)) < 0.1) ret(g, cx + x, base - 25, 2, 2, SOMBRA);
   ret(g, cx - rx + 8, base, rx * 2 - 16, 5, SOMBRA);
   // patas
-  for (const px of [-160, -70, 60, 150]) { ret(g, cx + px, base, 34, 24, SOMBRA); ret(g, cx + px, base, 4, 24, CORPO); }
+  for (const px of [-120, -55, 40, 100]) { ret(g, cx + px, base, 24, 28, SOMBRA); ret(g, cx + px, base, 3, 28, CORPO); }
   // pescoço e cabeça
-  for (let k = 0; k < 70; k++) { const x = cx - rx - k, y = base - 6 - Math.sin(k / 70 * Math.PI * 0.7) * 22; ret(g, x, y, 1, 18 - k * 0.06, k > 50 ? CORPO : SOMBRA); ret(g, x, y, 1, 1, LUZ); }
-  const hx = cx - rx - 78, hy = base - 34;
-  for (let y = -10; y <= 10; y++) for (let x = -16; x <= 14; x++) if ((x / 16) ** 2 + (y / 10) ** 2 < 1) ret(g, hx + x, hy + y, 1, 1, y < -6 ? LUZ : CORPO);
-  ret(g, hx - 8, hy - 3, 3, 2, '#f0c050'); // olho aceso
+  for (let k = 0; k < 44; k++) { const x = cx - rx + 6 - k, y = base - 8 - Math.sin(k / 44 * Math.PI * 0.6) * 16; ret(g, x, y, 1, 14 - k * 0.05, k > 30 ? CORPO : SOMBRA); ret(g, x, y, 1, 1, LUZ); }
+  const hx = cx - rx - 46, hy = base - 28;
+  for (let y = -8; y <= 8; y++) for (let x = -13; x <= 11; x++) if ((x / 13) ** 2 + (y / 8) ** 2 < 1) ret(g, hx + x, hy + y, 1, 1, y < -6 ? LUZ : CORPO);
+  ret(g, hx - 7, hy - 3, 2, 2, '#f0c050'); // olho aceso
   // ruínas e mata sobre o casco
-  for (let k = 0; k < 26; k++) {
+  for (let k = 0; k < 20; k++) {
     const x = cx + (r() - 0.5) * rx * 1.6, topo = base - Math.sqrt(Math.max(0, 1 - ((x - cx) / rx) ** 2)) * ry;
     if (r() < 0.45) {
-      const w = 5 + r() * 9, h = 8 + r() * 30;
+      const w = 4 + r() * 7, h = 6 + r() * 22;
       ret(g, x, topo - h, w, h + 3, r() < 0.5 ? CORPO : SOMBRA); ret(g, x, topo - h, 1, h, LUZ);
       for (let a = 0; a < w; a += 3) ret(g, x + a, topo - h - 2, 2, 2, CORPO); // ameias
       if (r() < 0.5) ret(g, x + w / 2, topo - h * 0.6, 1, 2, '#e0b050');   // janela acesa
@@ -104,18 +106,23 @@ function desenharColosso(g, r) {
     }
   }
   // cascatas escorrendo do casco
-  for (const k of [-120, -30, 90, 170]) { const x = cx + k, topo = base - Math.sqrt(1 - (k / rx) ** 2) * ry * 0.4; ret(g, x, topo, 2, 120 - topo, AGUA); ret(g, x + 2, topo, 1, 120 - topo, '#b0a070'); }
+  for (const k of [-90, -20, 60, 115]) { const x = cx + k, topo = base - Math.sqrt(1 - (k / rx) ** 2) * ry * 0.4; ret(g, x, topo, 2, 120 - topo, AGUA); ret(g, x + 2, topo, 1, 120 - topo, '#b0a070'); }
   // núcleo Quanta pulsando no flanco
   ret(g, cx + 20, base - 30, 5, 5, '#4fa6ab'); ret(g, cx + 21, base - 29, 3, 3, '#bff0ee');
 
   // mais ilhas pelo resto do horizonte
   const cores = ['#7e6440', '#977a4e', '#6a5436', '#6e6a3c'];
   for (let k = 0; k < 9; k++) ilha(g, r, 700 + r() * 700, 30 + r() * 60, 8 + r() * 22, cores);
-  // Andador distante (silhueta alta)
-  const ax = 1180;
-  ret(g, ax - 20, 30, 40, 26, CORPO); ret(g, ax - 20, 30, 40, 2, LUZ);
-  for (const p of [-18, -6, 6, 16]) ret(g, ax + p, 56, 3, 64, SOMBRA);
-  ret(g, ax - 2, 38, 4, 4, '#4fa6ab');
+  // Andador Quanta distante: corpo baixo, quatro pernas articuladas, olho teal
+  const ax = 1100, ay = 52, AND = '#766043';
+  for (let y = -9; y <= 7; y++) for (let x = -26; x <= 26; x++) if ((x / 26) ** 2 + (y / 9) ** 2 < 1) ret(g, ax + x, ay + y, 1, 1, y < -6 ? LUZ : AND);
+  ret(g, ax - 34, ay - 6, 12, 8, AND); ret(g, ax - 36, ay - 4, 3, 3, '#4fa6ab');
+  for (const [p, s] of [[-20, -1], [-8, -1], [8, 1], [20, 1]]) {
+    for (let k = 0; k < 16; k++) ret(g, ax + p + s * k * 0.5, ay + 4 - k, 2, 1, AND);       // coxa subindo
+    for (let k = 0; k < 44; k++) ret(g, ax + p + s * 8 + s * k * 0.12, ay - 12 + k * 1.5, 2, 2, SOMBRA); // canela descendo
+  }
+  for (let k = 0; k < 18; k++) ret(g, ax + 4, ay - 9 - k, 1, 1, AND);   // antena
+  ret(g, ax + 3, ay - 28, 3, 3, '#4fa6ab');
 }
 
 function criarCeu(jogo) {
@@ -166,9 +173,9 @@ function criarCeu(jogo) {
           vec4 l = texture2D(uLonge, vec2(u * 120.0 / 0.45 / 1440.0 - uGiro * 0.7 - uDesloc * 0.4, vl));
           c = mix(c, l.rgb, l.a * 0.55);
         }
-        float vc = (y - 0.36) / 0.66;
+        float vc = (y - 0.55) / 0.45;
         if (vc > 0.0 && vc < 1.0) {
-          vec4 k = texture2D(uColosso, vec2(u * 120.0 / 0.66 / 1440.0 - uGiro - uDesloc + 0.3, vc));
+          vec4 k = texture2D(uColosso, vec2(u * 120.0 / 0.45 / 1440.0 - uGiro - uDesloc + 0.17, vc));
           c = mix(c, k.rgb, k.a * 0.85);
         }
         // mar de nuvens na base do horizonte, cobrindo pés do colosso

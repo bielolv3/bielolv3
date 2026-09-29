@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Entidade } from './entidade.js';
+import { GRAVIDADE } from '../world/fisica.js';
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -66,11 +67,12 @@ export class Jogador extends Entidade {
 
       if (this.noChao) this.pulosRestantes = s.pulosNoAr;
       if (input.apertou('pulo')) {
-        if (this.noChao) this.vel.y = s.pulo;
-        else if (this.pulosRestantes > 0) { this.pulosRestantes--; this.vel.y = s.pulo * 0.9; }
+        if (this.noChao) { this.vel.y = s.pulo; this.jogo.eventos.emitir('pulo', { macaco: this.atual }); }
+        else if (this.pulosRestantes > 0) { this.pulosRestantes--; this.vel.y = s.pulo * 0.9; this.jogo.eventos.emitir('pulo', { macaco: this.atual, duplo: true }); }
       }
       // planeio do Orlando: segurar pulo caindo
-      if (s.planeio && !this.noChao && this.vel.y < -1.5 && input.segurando('pulo')) this.vel.y = -1.5;
+      // compensa a gravidade que a física aplica neste passo: queda constante em qualquer qps
+      if (s.planeio && !this.noChao && this.vel.y < -1.5 && input.segurando('pulo')) this.vel.y = -1.5 + GRAVIDADE * dt;
 
       if (input.apertou('golpe') && this.recarga.golpe <= 0) this.golpear();
     } else {

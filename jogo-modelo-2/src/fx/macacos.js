@@ -531,7 +531,8 @@ function desenharQuadro(t, nome, forma, pose, vista, ox, oy) {
     const m = troca ? [m0[1], m0[0]] : m0;
     // {fora: n} = para fora do corpo; de perfil "para fora" é profundidade: vira pouco x (perto à frente, longe atrás)
     // (braço erguido de perfil abre mais: um à frente, outro atrás, senão some atrás da cabeça)
-    const lado = (v, s, dy) => (typeof v === 'object' ? (perfil ? -v.fora * s * (dy < 0 ? 0.75 : 0.35) : v.fora * s) : v);
+    // ({fora: -n} = para dentro, na frente da barriga: de perfil vira "à frente do corpo")
+    const lado = (v, s, dy) => (typeof v === 'object' ? (perfil ? (v.fora < 0 ? -v.fora * 0.45 : -v.fora * s * (dy < 0 ? 0.75 : 0.35)) : v.fora * s) : v);
     mN = [oN[0] + lado(m[0][0], ns, m[0][1]), oN[1] + m[0][1]];
     mF = [oF[0] + lado(m[1][0], -ns, m[1][1]), oF[1] + m[1][1]];
   }
@@ -574,7 +575,7 @@ function desenharQuadro(t, nome, forma, pose, vista, ox, oy) {
   };
 
   const costas = vista === 'c';
-  const bracosAtras = costas && (pose.bolso && d.bolso);
+  const bracosAtras = costas && ((pose.bolso && d.bolso) || pose.item === 'chave');   // mãos na frente da barriga: de costas somem atrás do tronco
   const esticaLider = pose.estica ?? 1;
   const item = () => {
     if (pose.item === 'banana') { const m = troca ? mF : mN; banana(t, m[0], m[1] - d.mao.r - 1); }

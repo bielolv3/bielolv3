@@ -9,6 +9,7 @@ const DURACAO_SURTO = 8;
 
 const ICONE_SOM = '<svg viewBox="0 0 16 16"><path d="M2 5h3l4-3v12l-4-3H2z"/><path class="onda" d="M11 5h1v6h-1zM13 3h1v10h-1z"/></svg>';
 const ICONE_MUDO = '<svg viewBox="0 0 16 16"><path d="M2 5h3l4-3v12l-4-3H2z"/><path d="M11 6h1v1h1v1h1V7h-1V6h1V5h-1v1h-1V5h-1zM11 10h1V9h1v1h1v1h-1v-1h-1v1h-1z"/></svg>';
+const ICONE_NOTA = '<svg viewBox="0 0 16 16"><path d="M6 2h8v9h-1v1h-3v-1h-1V9h1V8h2V4H8v8H7v1H4v-1H3v-2h1V9h2z"/></svg>';
 const ICONE_PAUSA = '<svg viewBox="0 0 16 16"><path d="M4 3h3v10H4zM9 3h3v10H9z"/></svg>';
 
 // lê os recursos do jogador aceitando o formato novo (recursos) e o antigo (surto)
@@ -42,6 +43,7 @@ export function criarHud(jogo, raiz) {
     </div>
     <div class="hud-topo">
       <span class="sala"></span>
+      <button class="botao-icone musica" aria-label="Música (N)">${ICONE_NOTA}</button>
       <button class="botao-icone som" aria-label="Som"></button>
       <button class="botao-icone pausa" aria-label="Pausa">${ICONE_PAUSA}</button>
     </div>
@@ -73,6 +75,12 @@ export function criarHud(jogo, raiz) {
   const atualizarSom = () => { botaoSom.innerHTML = jogo.audio?.mudo ? ICONE_MUDO : ICONE_SOM; };
   jogo.eventos.on('mudo', atualizarSom);
   atualizarSom();
+  // música liga/desliga (a tecla N é tratada em audio/index.js; aqui só o botão e o estado)
+  const botaoMusica = $('.musica');
+  const atualizarMusica = () => botaoMusica.classList.toggle('desligada', jogo.audio?.musica?.ligada === false);
+  botaoMusica.addEventListener('click', () => { jogo.audio?.alternarMusica?.(); atualizarMusica(); });
+  addEventListener('keydown', (e) => { if (e.code === 'KeyN') setTimeout(atualizarMusica, 0); });
+  atualizarMusica();
 
   // estado anterior, para só mexer no DOM quando muda
   let ant = {};

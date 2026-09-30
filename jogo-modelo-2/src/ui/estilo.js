@@ -55,6 +55,7 @@ body.em-tela .hud-jogo{opacity:0;visibility:hidden}
 .botao-icone{pointer-events:auto;width:32px;height:32px;background:rgba(12,11,9,.7);border:2px solid var(--apagado);
   display:grid;place-items:center;padding:0}
 .botao-icone:hover{border-color:var(--mostarda)}
+.botao-icone.desligada svg{opacity:.35}
 .botao-icone svg{width:16px;height:16px;fill:var(--osso);shape-rendering:crispEdges}
 
 /* título da sala */

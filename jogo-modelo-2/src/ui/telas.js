@@ -13,7 +13,7 @@ const CONTROLES = `
     <span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></span><span>Hugo · Chico · Orlando</span>
     <span><kbd>F</kbd></span><span>Surto (barra cheia)</span>
     <span><kbd>Q</kbd><kbd>E</kbd></span><span>girar câmera</span>
-    <span><kbd>Esc</kbd></span><span>pausa · <kbd>M</kbd> som</span>
+    <span><kbd>Esc</kbd></span><span>pausa · <kbd>M</kbd> som · <kbd>N</kbd> música liga/desliga</span>
   </div>
   <div class="controles so-toque">
     <span>esquerda</span><span>joystick para andar</span>

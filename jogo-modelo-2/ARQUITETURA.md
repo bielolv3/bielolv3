@@ -87,7 +87,15 @@ perfil (6 blocos = 3 vistas × luz da esquerda/direita); a esquerda da tela é e
 A vista sai da direção na tela: eixo vertical dominante → frente/costas, horizontal → perfil, com
 histerese de 1,35× para não piscar na diagonal. `preaquecerMacacos` gera um bloco por vez em segundo plano.
 Animações: `parado, andar, correr, pulo, queda, pouso, golpe, identidade, dano, guarda,
-segurar, planar, rugido`. A máquina de estados fica em `Jogador.escolherQuadro` (vista pela
+segurar, planar, rugido, ocioso` (ocioso = gesto ocasional depois de 4–7 s parado: Hugo bate o pé
+e bufa, Chico coça a cabeça e olha em volta, Orlando mexe na chave inglesa).
+Legibilidade: pretos levantados um degrau (Chico tem pelagem própria, preto pardo), contraste do
+volume maior (`Tela.tom`) e **luz de recorte** de 1 px (`Tela.recorte`, força por macaco em
+`FORCA_RECORTE`) na borda da silhueta do lado do sol, mais fraca no topo — roda antes do contorno.
+Silhuetas: Hugo largo e quadrado (superelipse p≈3), Chico magro de braços longos e parado inquieto,
+Orlando com barrigão e braços até o joelho. `{fora: n}` negativo = mão para dentro (na frente da
+barriga); de perfil vira "à frente do corpo". De perfil, braço erguido abre à frente/atrás e é
+desenhado depois da cabeça (não some mais atrás dela). A máquina de estados fica em `Jogador.escolherQuadro` (vista pela
 direção relativa à câmera, luz pelo lado do sol na tela). Com `this.quadros = true` a
 deformação procedural de `Entidade.animarSprite` só tempera (squash leve, sem bob).
 Inimigos e fauna também têm quadros (`ANIMADOS` / `animarInimigo` em `fx/sprites.js`): Guardião,
@@ -99,8 +107,18 @@ Luz nos sprites: `Entidade.iluminar` (chamado em `sincronizar`) multiplica o spr
 `uLuz` (e `uLuzAdd`, luz somada dos braseiros para sprites escuros) = sol ou sombra do bioma (`jogo.luzSprites`, montado em `world/ambiente.js`; sombra = parede
 alta entre a entidade e o sol, 3 amostras no tilemap) + PointLights da sala com a mesma queda.
 Vem antes do flash branco e da cor fixa (silhueta); `semLuz = true` desliga (vaga-lume).
-Conferência: `node scripts/exportar-macacos.mjs` gera `referencias/folha-macacos.png` e os
-atlas em `referencias/macacos/`. Os PNGs de `public/sprites/` seguem como retratos do HUD.
+Inimigos/fauna (`fx/sprites.js`): `Tela.relevo` dá a mesma luz de recorte (cima/esquerda) e puxa
+a borda oposta para a sombra; Legião = aço cinza-azulado com fendas acesas, Quanta = teal com
+circuitos (manto do Acólito, casco do Andador). Humanoides (Guardião, Acólito, Sentinela, Bruto) têm
+quadro `tonto` (estrelas girando, olhos apagados) escolhido por `animarInimigo` quando `atordoado`.
+Tartaruga-menor (`parado`, `andar`, `nadar` com marola, `recolher` no casco ao ser empurrada),
+Inseto-luz (asas) e Ninho (ovos mexendo/pulsando, `golpe` = pisado) também são faixas animadas;
+quem não é Inimigo escolhe o quadro com `quadroFauna(ent, animação, tempo)`.
+Retratos: `retratoMacaco(nome, forma)` (fx/macacos.js) tira um busto 28×28 do mesmo gerador
+(normal e Surto) — HUD (1× nos pequenos, 2× no ativo) e trio na tela de título. Os PNGs de
+`public/sprites/` ficam só como arte de referência.
+Conferência: `node scripts/exportar-macacos.mjs` gera `referencias/folha-macacos.png` (macacos +
+inimigos/fauna), os atlas em `referencias/macacos/` e `referencias/macacos/retratos.png`.
 
 ## Relíquias
 

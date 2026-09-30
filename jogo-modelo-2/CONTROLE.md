@@ -39,3 +39,4 @@ Para republicar: `npm run build && node scripts/pagina-artifact.mjs` e publicar 
 | 29/09 | 4b | US$ 54,10 | Macacos redesenhados na escala dos tiles com 43 quadros × 2 direções × 2 formas; Guardião e Acólito animados; 12 salas ok no bot; republicado v3 |
 | 29/09 | 5 | US$ 57,49 | Luz da sala nos sprites, 9 inimigos/fauna animados, 12 salas ok, resumo para o GPT; publicado v4 (final desta rodada) |
 | 29/09 | 6 | US$ 62,66 | Vista de perfil dos macacos, Matriarca e Drone Construtor animados, luz mais forte nos sprites; 12 salas ok; publicado v5 |
+| 30/09 | 7 | US$ 75,18 | Trilha musical procedural (5 faixas + jingles), todos os personagens polidos (rim light, silhuetas, idle, tonto, fauna animada, retratos novos); 12 salas ok; publicado v6. **Fim do orçamento.** |

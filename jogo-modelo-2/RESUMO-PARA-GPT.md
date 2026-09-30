@@ -23,7 +23,7 @@
   - HUD, telas de título, pausa, derrota e vitória;
   - progresso salvo, com Continuar e seleção de salas;
   - controles de toque para celular e gamepad;
-  - som procedural.
+  - trilha musical procedural (tema em ré dórico com variações por ato, camadas de tensão, chefe, Surto, vinhetas; tecla N) e efeitos sonoros.
 
 ## Decisões de design tomadas aqui (para manter coerência)
 - **A memória é a física do mundo.** Selos, portas e alavancas são "escrita" Quanta. A banana desliga a Legião porque ela não tem protocolo para fruta.

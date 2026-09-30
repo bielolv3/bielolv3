@@ -1,5 +1,7 @@
 // Frente C: sons procedurais (WebAudio) ligados aos eventos do jogo.
 // Nada toca antes da primeira interação do usuário (política dos navegadores).
+// A trilha musical (musica.js + faixas.js) tem volume próprio: tecla N liga/desliga só a música.
+import { criarMusica } from './musica.js';
 
 const CHAVE_MUDO = 'primordia.mudo';
 // nota grave de cada sala (Hz) — a ruína "zumbe" diferente em cada câmara
@@ -10,6 +12,8 @@ export function instalarAudio(jogo) {
   let mudo = false;
   try { mudo = localStorage.getItem(CHAVE_MUDO) === '1'; } catch {}
   let salaAtual = null, salaIndice = 0;
+  const musica = criarMusica(jogo);
+  musica.mudo = mudo;
 
   function destravar() {
     if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
@@ -25,6 +29,7 @@ export function instalarAudio(jogo) {
     ruidoBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
     const d = ruidoBuf.getChannelData(0);
     for (let k = 0; k < d.length; k++) d[k] = Math.random() * 2 - 1;
+    musica.conectar(ctx, mestre, ruidoBuf);
     if (salaAtual) iniciarDrone(salaAtual, salaIndice);
   }
   for (const ev of ['pointerdown', 'keydown', 'touchstart']) addEventListener(ev, destravar, { passive: true });
@@ -106,6 +111,7 @@ export function instalarAudio(jogo) {
   function iniciarDrone(sala, indice) {
     if (!ctx) return;
     pararDrone();
+    if (musica.ligada) return;
     const base = sala.som?.nota ?? NOTAS[indice % NOTAS.length];
     const quanta = sala.som?.quanta ?? sala.chao.join('').split('=').length > 12;
     const t = ctx.currentTime;
@@ -157,7 +163,7 @@ export function instalarAudio(jogo) {
   ev.on('golpe', () => tocar('golpe'));
   ev.on('dano', ({ alvo }) => tocar(alvo === jogo.jogador ? 'danoJogador' : 'acerto'));
   ev.on('morte', ({ alvo } = {}) => { if (alvo !== jogo.jogador) tocar('morte'); });
-  ev.on('derrota', () => tocar('derrota'));
+  ev.on('derrota', () => { if (!musica.ligada) tocar('derrota'); });
   ev.on('troca', ({ macaco } = {}) => tocar('troca', macaco));
   ev.on('coleta', (d) => tocar(d?.tipo === 'memoria' ? 'memoria' : 'coleta'));
   ev.on('surto', (d) => tocar(d?.ativo === false ? 'fimSurto' : 'surto'));
@@ -176,7 +182,7 @@ export function instalarAudio(jogo) {
   ev.on('quebra', () => tocar('quebra'));
   ev.on('parry', () => tocar('parry'));
   ev.on('alerta', () => tocar('alerta'));
-  ev.on('vitoria', () => tocar('vitoria'));
+  ev.on('vitoria', () => { if (!musica.ligada) tocar('vitoria'); });
   ev.on('pulo', () => tocar('pulo'));
   ev.on('pouso', ({ forca = 0 } = {}) => { if (forca > 6) tocar('pouso', forca); });
   ev.on('pausa', ({ pausado }) => abafar(pausado));
@@ -190,12 +196,20 @@ export function instalarAudio(jogo) {
     get mudo() { return mudo; },
     destravar,
     tocar,
+    musica,
+    alternarMusica() {
+      musica.alternar();
+      if (salaAtual) iniciarDrone(salaAtual, salaIndice);
+      return musica.ligada;
+    },
     alternarMudo() {
       mudo = !mudo;
+      musica.mudo = mudo;
       try { localStorage.setItem(CHAVE_MUDO, mudo ? '1' : '0'); } catch {}
       if (ctx) mestre.gain.setTargetAtTime(mudo ? 0 : 0.7, ctx.currentTime, 0.05);
       ev.emitir('mudo', { mudo });
     },
   };
   ev.emitir('mudo', { mudo });
+  addEventListener('keydown', (e) => { if (e.code === 'KeyN' && !e.repeat) jogo.audio.alternarMusica(); });
 }

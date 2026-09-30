@@ -138,7 +138,8 @@ export class Inimigo extends Entidade {
     if (!this.sprite) return;
     animarInimigo(this, dt);   // quadros (tipos em ANIMADOS de fx/sprites.js; os outros ignoram)
     // tonto: balança; preparando: avermelha pulsando
-    this.sprite.material.rotation = this.atordoado > 0 ? Math.sin(this.t * 14) * 0.25 : 0;
+    // com quadro "tonto" (estrelas) o balanço vira só um cambalear leve
+    this.sprite.material.rotation = this.atordoado > 0 ? Math.sin(this.t * 14) * (this._animI?.f.indice.tonto ? 0.08 : 0.25) : 0;
     const pulso = this.preparo > 0 ? 0.5 + 0.5 * Math.sin(this.t * 30) : 0;
     this.sprite.material.color.setRGB(1, 1 - pulso * 0.55, 1 - pulso * 0.6);
   }

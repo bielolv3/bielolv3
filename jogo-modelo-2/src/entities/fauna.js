@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { Entidade } from './entidade.js';
 import { Inimigo } from './inimigos.js';
 import { Onda, Casca } from './projeteis.js';
-import { aplicarSpriteInimigo, criarSpriteInimigo } from '../fx/sprites.js';
+import { aplicarSpriteInimigo, quadroFauna } from '../fx/sprites.js';
 import { DEGRAU } from '../world/fisica.js';
 import { fixo } from '../core/liberar.js';
 
@@ -443,8 +443,7 @@ export class Ninho extends Entidade {
     super(jogo, x, z, { raio: 0.45 });
     this.ehNinho = true;
     this.recarga = 0;
-    this.sprite = criarSpriteInimigo('ninho');
-    this.objeto.add(this.sprite);
+    aplicarSpriteInimigo(this, 'ninho');   // ovos mexendo (fx/sprites.js)
     this.sombra.scale.setScalar(0.5);
     this.t = 0;
   }
@@ -459,7 +458,8 @@ export class Ninho extends Entidade {
       this.jogo.eventos.emitir('fauna', { tipo: 'ninho', alvo: this });
     }
     this.balanco = Math.max(0, (this.balanco ?? 0) - dt);
-    this.sprite.material.rotation = this.balanco > 0 ? Math.sin(this.t * 40) * 0.12 : 0;
+    this.sprite.material.rotation = this.balanco > 0 ? Math.sin(this.t * 40) * 0.08 : 0;
+    quadroFauna(this, this.balanco > 0 ? 'golpe' : 'parado', this.t, this.balanco > 0 ? 12 : undefined);
     this.sincronizar(dt);
   }
 }
@@ -482,8 +482,8 @@ export class Tartaruga extends Entidade {
     this.passo = null;         // { de, para, t, i, j }
     this.dir = null;           // direção de nado [di, dj]
     this.pausa = 0;
-    this.sprite = criarSpriteInimigo('tartaruga');
-    this.objeto.add(this.sprite);
+    aplicarSpriteInimigo(this, 'tartaruga');   // parado / nadar / recolher (fx/sprites.js)
+    this.recolhida = 0;
     this.i = Math.floor(x); this.j = Math.floor(z);
     this.ocupar(this.i, this.j);
     this.pos.set(this.i + 0.5, this.topo(this.i, this.j) - CASCO_ALTO, this.j + 0.5);
@@ -580,6 +580,12 @@ export class Tartaruga extends Entidade {
     const r = _tela.setFromMatrixColumn(this.jogo.camera.cam.matrixWorld, 0);
     const lado = o[0] * r.x + o[1] * r.z;
     if (Math.abs(lado) > 0.3) this.sprite.scale.x = Math.abs(this.sprite.scale.x) * (lado > 0 ? -1 : 1);
+    // quadro: empurrada (ou alguém forçando) recolhe no casco e demora a pôr a cabeça para fora
+    const agora = performance.now() / 1000;
+    if ((this.passo && !this.dir) || this.empurrando > 0.08) this.recolhida = 0.9;
+    this.recolhida = Math.max(0, this.recolhida - (agora - (this._tv ?? agora)));
+    this._tv = agora;
+    quadroFauna(this, this.dir ? 'nadar' : this.recolhida > 0 ? 'recolher' : 'parado', agora, this.dir ? 6 : undefined);
     // nadando: balança devagar na água
     this.sprite.position.y = this.dir ? CASCO_ALTO * 0.35 + Math.sin(performance.now() / 400) * 0.03 : 0;
     this.sombra.visible = !this.dir;
@@ -595,9 +601,8 @@ export class InsetoLuz extends Entidade {
     this.sombra.visible = false;
     this.posto = this.pos.clone();
     this.t = Math.random() * 10;
-    this.sprite = criarSpriteInimigo('inseto');
+    aplicarSpriteInimigo(this, 'inseto');   // asas batendo (fx/sprites.js)
     this.semLuz = true;   // brilha sozinho
-    this.objeto.add(this.sprite);
     if (!texBrilhoInseto) {
       const c = document.createElement('canvas'); c.width = c.height = 16;
       const g = c.getContext('2d');
@@ -620,6 +625,7 @@ export class InsetoLuz extends Entidade {
     if (this.jogo.mapa.vazioEm(this.pos.x, this.pos.z)) this.pos.y = this.posto.y + 1.2;
     this.brilho.material.opacity = 0.6 + Math.sin(this.t * 5) * 0.35;
     this.brilho.position.y = 0.15;
+    quadroFauna(this, 'parado', this.t);
     this.sincronizar(dt);
   }
 }

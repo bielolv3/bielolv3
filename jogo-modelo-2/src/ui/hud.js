@@ -1,8 +1,8 @@
 // HUD: macacos (retratos 1/2/3), vida, Surto, bananas, nome da sala e dicas.
 import { icones } from './pixel.js';
 import { instalarHudReliquias } from './reliquias.js';
+import { retratoMacaco } from '../fx/macacos.js';
 
-const BASE = import.meta.env.BASE_URL;
 const ORDEM = [['hugo', '1'], ['chico', '2'], ['orlando', '3']];
 const NOMES = { hugo: 'Hugo', chico: 'Chico', orlando: 'Orlando' };
 const DURACAO_SURTO = 8;
@@ -31,7 +31,7 @@ export function criarHud(jogo, raiz) {
     <div class="hud-canto">
       <div class="retratos">${ORDEM.map(([n, t]) => `
         <button class="retrato px" data-macaco="${n}" aria-label="${NOMES[n]} (${t})"
-          style="background-image:url('${BASE}sprites/${n}_normal.png')"><span class="tecla">${t}</span></button>`).join('')}
+          style="background-image:url('${retratoMacaco(n, 'normal')}')"><span class="tecla">${t}</span></button>`).join('')}
       </div>
       <div class="status">
         <div class="nome"></div>
@@ -146,7 +146,8 @@ export function criarHud(jogo, raiz) {
         const n = b.dataset.macaco, eAtivo = n === j.atual;
         b.classList.toggle('ativo', eAtivo);
         b.classList.toggle('surto', eAtivo && r.ativo);
-        b.style.backgroundImage = `url('${BASE}sprites/${n}_${eAtivo && r.ativo ? 'surto' : 'normal'}.png')`;
+        // bustos gerados pelo mesmo desenhista dos quadros do jogo (fx/macacos.js)
+        b.style.backgroundImage = `url('${retratoMacaco(n, eAtivo && r.ativo ? 'surto' : 'normal')}')`;
       });
       nome.textContent = (j.stats?.nome ?? NOMES[j.atual] ?? '').toUpperCase();
     }

@@ -16,6 +16,7 @@ const MANTO = ['#2a2014', '#3e2f1c', '#5a4428', '#76593a', '#93744c'];
 const QUANTA = ['#1d3d40', '#2a6468', '#4fa6ab', '#a8ecea', '#e8fffe'];
 const BRASA = ['#5a1a0e', '#c04a2c', '#ff7a4a', '#ffd0a0'];
 
+const CORES_RELEVO = /^#[0-9a-f]{6}$/i;
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => v / 16 - 0.5);
 const bayer = (x, y) => BAYER[(y & 3) * 4 + (x & 3)];
 
@@ -46,6 +47,22 @@ class Tela {
   linha(x0, y0, x1, y1, cor) {
     const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1);
     for (let k = 0; k <= n; k++) this.set(x0 + (x1 - x0) * k / n, y0 + (y1 - y0) * k / n, cor);
+  }
+  // relevo: mesma regra dos macacos (fx/macacos.js) — 1 px de luz de recorte na borda
+  // de cima/esquerda da silhueta (luz quente) e a borda de baixo/direita puxada para a
+  // sombra. Dá o 4º tom e separa a figura do chão com o mesmo peso dos jogáveis.
+  relevo(forca = 0.34) {
+    const { w, h } = this, luz = [], somb = [];
+    const vazio = (x, y) => x < 0 || y < 0 || x >= w || y >= h || !this.px[y * w + x];
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const c = this.px[y * w + x];
+      if (!c || c === TINTA || c === OSSO || !CORES_RELEVO.test(c)) continue;
+      if (vazio(x - 1, y) || vazio(x, y - 1)) luz.push(y * w + x);
+      else if (vazio(x + 1, y) || vazio(x, y + 1)) somb.push(y * w + x);
+    }
+    const mix = (c, alvo, k) => '#' + [1, 3, 5].map((o) => { const a = parseInt(c.slice(o, o + 2), 16), z = parseInt(alvo.slice(o, o + 2), 16); return Math.round(a + (z - a) * k).toString(16).padStart(2, '0'); }).join('');
+    for (const i of luz) this.px[i] = mix(this.px[i], '#f4e8cc', forca);
+    for (const i of somb) this.px[i] = mix(this.px[i], '#0c0b09', forca * 0.7);
   }
   // contorno de tinta em volta de tudo que foi pintado
   contorno() {
@@ -142,8 +159,11 @@ function guardiaoPose(t, p = {}) {
   t.re(3, 18 + by + sw, 4, 10, ACO, 2);                                         // braço de trás
   t.el(6, 16 + by, 4, 3, ACO); t.el(22, 16 + by, 4, 3, ACO);                   // ombreiras
   t.el(14, 9 + by, 5.5, 6, ACO);                                               // elmo
-  const olho = p.aviso ? [BRASA[1], BRASA[2], BRASA[3]] : [BRASA[0], BRASA[1], BRASA[2]];
-  t.re(10, 9 + by, 9, 2, olho, 1); t.set(14, 9 + by, BRASA[3]); t.set(15, 9 + by, BRASA[3]);
+  const olho = p.apagado ? [ACO[0], BRASA[0], BRASA[1]] : p.aviso ? [BRASA[1], BRASA[2], BRASA[3]] : [BRASA[0], BRASA[1], BRASA[2]];
+  t.re(10, 9 + by, 9, 2, olho, 1);
+  if (!p.apagado) { t.set(14, 9 + by, BRASA[3]); t.set(15, 9 + by, BRASA[3]); }
+  t.linha(10, 7 + by, 18, 7 + by, ACO[4]);                                      // aba do elmo (lê o volume)
+  t.set(9, 12 + by, ACO[1]); t.set(19, 12 + by, ACO[1]);
   const haste = (x0, y0, x1, y1) => { t.linha(x0, y0, x1, y1, ACO[1]); t.linha(x0 + 1, y0, x1 + 1, y1, ACO[2]); };
   if (p.alabarda === 'alto') {           // preparo: alabarda erguida para trás
     t.re(21, 13 + by, 4, 8, ACO, 2);
@@ -166,9 +186,12 @@ function acolitoPose(t, p = {}) {
   }
   if (passo) t.re(passo > 0 ? 13 : 6, 41, 3, 2, ['#15120d', '#2a2014', '#3e2f1c'], 1);   // pé aparecendo sob o manto
   t.re(6, 26 + by, 12, 2, [QUANTA[0], QUANTA[1], QUANTA[2]], 1);            // faixa teal
+  // circuitos Quanta bordados no manto: descem da faixa e ramificam
+  for (const [x0, y0, x1, y1] of [[9, 28, 9, 33], [9, 33, 7, 35], [13, 28, 13, 31], [13, 31, 15, 33], [15, 33, 15, 37]]) t.linha(x0, y0 + by, x1, y1 + by, QUANTA[1]);
+  for (const [x, y] of [[7, 35], [15, 37], [11, 22]]) t.set(x, y + by, p.apagado ? QUANTA[1] : QUANTA[3]);
   t.el(11, 9 + by, 5.5, 6, MANTO);                                            // capuz
   t.el(11, 10.5 + by, 3.2, 3.5, ['#0c0b09', '#15120d', '#1d190f']);
-  const olho = p.brilho ? QUANTA[4] : QUANTA[3];
+  const olho = p.apagado ? QUANTA[1] : p.brilho ? QUANTA[4] : QUANTA[3];
   t.set(10, 10 + by, olho); t.set(13, 10 + by, olho);
   if (p.conjura) {                                                            // cajado erguido, orbe carregando
     t.el(17, 17 + by, 2.5, 3, MANTO);                                         // manga erguida
@@ -191,7 +214,8 @@ function sentinelaPose(t, p = {}) {
   t.re(8 + rc, 24 + by, 8, 2, ACO, 1);
   t.el(12 + rc, 7 + by, 4, 5, ACO);
   const r = p.mira ? (p.brilho ? 2.2 : 1.9) : 1.6;
-  t.el(12 + rc, 7 + by, r, r, p.mira ? [BRASA[2], BRASA[3], '#fff4e0'] : [BRASA[1], BRASA[2], BRASA[3]]);
+  t.el(12 + rc, 7 + by, r, r, p.apagado ? [ACO[0], BRASA[0], BRASA[1]] : p.mira ? [BRASA[2], BRASA[3], '#fff4e0'] : [BRASA[1], BRASA[2], BRASA[3]]);
+  t.linha(8 + rc, 16 + by, 8 + rc, 22 + by, ACO[4]); t.set(12 + rc, 29 + by, BRASA[1]);   // quina do peito e luz de status
   if (p.mira || p.tiro) {                                                           // canhão erguido à frente
     t.re(16 + rc * 2, 14 + by, 9, 4, ACO, 3);
     const boca = p.brilho || p.tiro ? BRASA[3] : BRASA[2];
@@ -207,7 +231,7 @@ function brutoPose(t, p = {}) {
   const by = p.by ?? 0, [a, b] = p.pes ?? [[0, 0], [0, 0]], [pl, pr] = p.punho ?? [0, 0], ln = p.ln ?? 0;
   const perna = (x, [dx, lev]) => { const y0 = 44 + by; t.re(x + dx, y0, 8, 60 - lev - y0, ACO, 1); };
   perna(12, a); perna(24, b);
-  const visor = p.aviso ? [BRASA[1], BRASA[2], BRASA[3]] : [BRASA[0], BRASA[1], BRASA[2]];
+  const visor = p.apagado ? [ACO[0], BRASA[0], BRASA[1]] : p.aviso ? [BRASA[1], BRASA[2], BRASA[3]] : [BRASA[0], BRASA[1], BRASA[2]];
   if (p.erguer) {                                                                   // punhos acima da cabeça
     t.re(2, 12 + by, 8, 16, ACO, 2); t.re(34, 12 + by, 8, 16, ACO, 2);
     t.el(22, 30 + by, 15, 15, ACO);
@@ -292,6 +316,8 @@ function andadorPose(t, p = {}) {
   });
   t.el(37, 42 + by, 26, 13, ['#1d2a2c', '#2d3e3f', '#465b5a', '#6a8583', '#8fb0ad']);
   t.re(22, 47 + by, 30, 3, [QUANTA[1], QUANTA[2], QUANTA[3]], p.aviso ? 2 : 1);
+  for (const [x0, y0, x1, y1] of [[24, 46, 24, 38], [24, 38, 30, 34], [50, 46, 50, 40], [50, 40, 45, 36], [37, 46, 37, 42]]) t.linha(x0, y0 + by, x1, y1 + by, QUANTA[1]);
+  for (const [x, y] of [[30, 34], [45, 36], [37, 42]]) t.set(x, y + by, QUANTA[3]);
   t.el(37, 26 + by, 9, 7, ['#1d2a2c', '#2d3e3f', '#465b5a', '#6a8583']);
   const r = p.aviso ? 4.3 : 3.5;
   t.el(37, 27 + by, r, r, QUANTA); t.set(37, 26 + by, QUANTA[4]); if (p.brilho) t.el(37, 27 + by, 1.6, 1.6, [QUANTA[4]]);
@@ -396,21 +422,25 @@ const ANIMADOS = {
     andar: [{}, { by: -1, pes: [[-1, 1], [1, 0]], braco: 1 }, {}, { by: -1, pes: [[1, 0], [-1, 1]], braco: -1 }],
     preparo: [{ alabarda: 'alto', aviso: true, by: 1 }],
     golpe: [{ alabarda: 'golpe', aviso: true, by: 1, pes: [[2, 0], [-1, 0]] }],
-  }, guardiaoPose],
+    tonto: [1, 2, 3, 4].map((k) => ({ by: 2, braco: 2, tonto: k, apagado: true, pes: [[k % 2, 0], [0, 0]] })),
+  }, guardiaoPose, { cabeca: [14, 4] }],
   acolito: [24, 44, 12, {
     andar: [{}, { by: -1, passo: -1 }, {}, { by: -1, passo: 1 }],
     preparo: [{ conjura: true }, { conjura: true, brilho: true }],
-  }, acolitoPose],
+    tonto: [1, 2, 3, 4].map((k) => ({ by: 2, tonto: k, apagado: true, passo: k % 2 ? 1 : 0 })),
+  }, acolitoPose, { cabeca: [11, 4] }],
   sentinela: [30, 44, 12, {
     andar: [{}, { by: -1, pes: [[-1, 2], [1, 0]], braco: 1 }, {}, { by: -1, pes: [[1, 0], [-1, 2]], braco: -1 }],
     preparo: [{ mira: true }, { mira: true, brilho: true }],
     golpe: [{ tiro: true, mira: true }],
-  }, sentinelaPose],
+    tonto: [1, 2, 3, 4].map((k) => ({ by: 2, braco: 2, tonto: k, apagado: true })),
+  }, sentinelaPose, { cabeca: [12, 3] }],
   bruto: [50, 62, 22, {
     andar: [{ by: 1 }, { pes: [[-1, 3], [0, 0]], punho: [-2, 2] }, { by: 1 }, { pes: [[0, 0], [1, 3]], punho: [2, -2] }],
     preparo: [{ erguer: true, aviso: true, by: 2 }, { erguer: true, aviso: true, by: 1 }],
     investida: [{ investida: true, aviso: true, ln: 4, by: 1, pes: [[-2, 0], [3, 3]] }, { investida: true, aviso: true, ln: 4, by: 2, pes: [[2, 3], [-2, 0]] }],
-  }, brutoPose],
+    tonto: [1, 2, 3, 4].map((k) => ({ by: 3, punho: [2, 3], tonto: k, apagado: true })),
+  }, brutoPose, { cabeca: [22, 9] }],
   drone: [22, 24, 11, {
     parado: [{}, { helice: 1 }],
     preparo: [{ aviso: true }, { aviso: true, helice: 1, brilho: true }],
@@ -450,6 +480,17 @@ const ANIMADOS = {
   }, plantaPose, { esquerda: true, fps: 2 }],
 };
 
+// atordoado: três estrelinhas girando em volta da cabeça (fase 1..4)
+function estrelas(t, [cx, cy], fase) {
+  for (let k = 0; k < 3; k++) {
+    const a = (fase - 1) * Math.PI / 2 + k * Math.PI * 2 / 3;
+    const x = Math.round(cx + Math.cos(a) * 6), y = Math.round(cy + Math.sin(a) * 2);
+    const cor = k === 0 ? '#fff0b0' : '#f0c666';
+    t.set(x, y, cor); t.set(x - 1, y, '#d09a2c'); t.set(x + 1, y, '#d09a2c'); t.set(x, y - 1, '#d09a2c'); t.set(x, y + 1, '#d09a2c');
+    t.set(x, y, cor);
+  }
+}
+
 const cacheAnim = new Map();
 function faixaAnimada(tipo) {
   if (cacheAnim.has(tipo)) return cacheAnim.get(tipo);
@@ -459,7 +500,11 @@ function faixaAnimada(tipo) {
   const c = document.createElement('canvas');
   c.width = w * lista.length; c.height = h;
   const g = c.getContext('2d');
-  lista.forEach((p, k) => { const t = new Tela(w, h); desenho(t, p); t.contorno(); g.drawImage(t.canvas(), k * w, 0); });
+  lista.forEach((p, k) => {
+    const t = new Tela(w, h); desenho(t, p);
+    if (p.tonto) estrelas(t, op.cabeca ?? [w / 2, 4], p.tonto);
+    t.relevo(op.relevo); t.contorno(); g.drawImage(t.canvas(), k * w, 0);
+  });
   const f = { canvas: c, w, h, cx, n: lista.length, indice, esquerda: !!op.esquerda, fps: op.fps ?? 3 };
   cacheAnim.set(tipo, f);
   return f;
@@ -504,7 +549,8 @@ export function animarInimigo(ent, dt) {
   A.pos = Math.max(0, (A.pos ?? 0) - dt);
   const h = Math.hypot(ent.vel.x, ent.vel.z);
   let an = 'andar', i = 0;
-  if (((ent._anim?.golpe ?? 0) > 0 || A.pos > 0) && f.indice.golpe) an = 'golpe';
+  if (ent.atordoado > 0 && f.indice.tonto) { an = 'tonto'; i = Math.floor(A.t * 6); }
+  else if (((ent._anim?.golpe ?? 0) > 0 || A.pos > 0) && f.indice.golpe) an = 'golpe';
   else if (ent.mastigando > 0 && f.indice.golpe) an = Math.floor(A.t * 7) % 2 ? 'golpe' : 'parado';
   else if (ent.investida > 0 && f.indice.investida) { an = 'investida'; i = Math.floor(A.t * 10); }
   else if (ent.preparo > 0 && ent.atordoado <= 0) { an = 'preparo'; i = Math.floor(A.t * 8); }
@@ -530,8 +576,7 @@ export function texturaInimigo(tipo) {
     const d = DESENHOS[tipo] ?? DESENHOS.guardiao;
     const t = new Tela(d[0], d[1]);
     d[2](t);
-    t.contorno();
-    const tex = new THREE.CanvasTexture(t.canvas());
+    const tex = new THREE.CanvasTexture((t.relevo(), t.contorno(), t.canvas()));
     tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false;
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.tamanho = [d[0] / 32, d[1] / 32];
@@ -733,6 +778,80 @@ ANIMADOS.matriarca = [150, 184, 75, {
   esporosPrep: [{ olho: 1, esporos: 1, sw: 1 }, { olho: 2, esporos: 1, by: 1, sw: -1 }],
   esporos: [{ olho: 2, esporos: 2, by: -1 }],
 }, matriarcaPose, { esquerda: true, fps: 1.6 }];
+// Tartaruga-menor: parado (pisca), andar (patas alternadas), nadar (nadadeiras e marola),
+// recolher (cabeça e patas para dentro do casco quando empurrada).
+const AGUA = ['#4a8a9a', '#7ab8c4', '#b8e4ea'];
+function tartarugaPose(t, p = {}) {
+  const [a, b] = p.patas ?? [0, 0], by = p.by ?? 0, rc = p.recolhe;
+  if (p.nada) { t.el(6 + a, 21, 5, 1.6, PELE); t.el(33 + b, 21, 5, 1.6, PELE); }
+  else if (rc) { t.el(10, 22, 2.5, 1.5, PELE.slice(0, 3)); t.el(29, 22, 2.5, 1.5, PELE.slice(0, 3)); }
+  else { t.el(8 + a, 22 - (a < 0 ? 1 : 0), 4, 3, PELE); t.el(30 + b, 22 - (b < 0 ? 1 : 0), 4, 3, PELE); }
+  t.el(20, 16 + by, 15, 8, CASCO);                                                    // casco
+  for (let x = 9; x < 32; x += 6) t.linha(x, 11 + by, x + 2, 22 + by, CASCO[0]);      // placas
+  for (let x = 11; x < 32; x += 6) t.set(x, 13 + by, CASCO[4]);                        // brilho das placas
+  t.linha(6, 19 + by, 34, 19 + by, CASCO[1]); t.linha(8, 20 + by, 32, 20 + by, CASCO[3]);
+  if (rc) { t.el(6, 18 + by, 2, 2, ['#0c0b09', '#1a150c']); t.set(6, 17 + by, OSSO); }   // só o olho no escuro do casco
+  else {
+    const hx = 4 + (p.cab ?? 0);
+    t.el(hx, 16 + by, 4.5, 3.5, PELE); t.set(hx - 2, 15 + by, p.pisca ? PELE[1] : TINTA); if (!p.pisca) t.set(hx - 1, 14 + by, OSSO);
+    t.linha(hx - 3, 18 + by, hx - 1, 18 + by, PELE[0]);                                 // boca
+  }
+  t.re(16, 5 + by, 3, 5, ['#4f4535', '#655845', '#7c6d56', '#948468']);                // ruína em miniatura
+  t.set(17, 6 + by, '#e0b050');
+  t.linha(24, 9 + by, 24 + (p.sw ?? 0), 3 + by, FOLHA[2]); t.el(24 + (p.sw ?? 0), 3 + by, 3, 2, FOLHA);   // arvorezinha
+  if (!rc) t.linha(36, 18 + by, 39, 19 + by + (p.rabo ?? 0), PELE[2]);                  // rabo
+  if (p.nada) for (let x = 2; x < 40; x++) if ((x + (p.onda ?? 0)) % 5 < 3) t.set(x, 24, AGUA[(x + (p.onda ?? 0)) % 5 === 1 ? 2 : 1]);
+}
+
+// Inseto-luz: asas batendo (alto / meio / baixo), abdômen aceso.
+function insetoPose(t, p = {}) {
+  const asa = p.asa ?? 0;
+  t.el(6, 5, 3, 2.5, ['#1a2a4a', '#2a4a8a', '#4a7ad0']);
+  t.el(9, 6, 2.5, 2, ['#60c0ff', '#a0e8ff', '#f0ffff']);
+  const W = ['#90b0d0', '#d0e8f8', '#f4fbff'];
+  if (asa === 0) { t.el(5, 1.8, 2, 1.6, W); t.el(7, 1.6, 1.6, 1.4, W); }
+  else if (asa === 1) { t.el(4, 3, 2.6, 1, W); t.el(7.5, 3, 2, 1, W); }
+  else { t.el(5, 7.6, 2.2, 1.2, W); }
+  t.set(4, 4, OSSO);                                                                   // olho
+}
+
+// Ninho: ovos que mexem de leve e um deles pulsando (vida lá dentro); pisado = sacode.
+const OVO = ['#b0a890', '#d8d0b8', '#f4eedc'];
+function ninhoPose(t, p = {}) {
+  const [o1, o2, o3] = p.ov ?? [0, 0, 0];
+  t.el(16, 11, 15, 4.5, CASCO);
+  t.el(11 + o1, 7, 3.5, 4, OVO); t.el(18 + o2, 6 - (p.pula ?? 0), 3.5, 4.5, p.pulso ? ['#c0b890', '#e8e0b8', '#fffbe6'] : OVO); t.el(24 + o3, 8, 3, 3.5, OVO);
+  t.set(18 + o2, 4 - (p.pula ?? 0), '#7a9a5a'); t.set(11 + o1, 6, '#7a9a5a');
+  if (p.pulso) { t.set(17 + o2, 6 - (p.pula ?? 0), '#fff0b0'); t.set(19 + o2, 8 - (p.pula ?? 0), AMBAR[2]); }
+  if (p.racha) { t.linha(17 + o2, 5, 19 + o2, 7, CASCO[1]); t.set(18 + o2, 8, CASCO[1]); }
+  for (let x = 2; x < 30; x += 2) t.linha(x, 10 + (x % 3), x + 3, 14 - (x % 2), CASCO[(x >> 1) % 2 ? 1 : 3]);   // gravetos na frente dos ovos
+}
+
+Object.assign(ANIMADOS, {
+  tartaruga: [40, 26, 20, {
+    parado: [{}, {}, {}, { pisca: true }, {}, { cab: -1 }],
+    andar: [{ patas: [0, 0] }, { patas: [-2, 1], cab: -1, by: -1 }, { patas: [0, 0] }, { patas: [1, -2], cab: -1, by: -1, rabo: 1 }],
+    nadar: [0, 1, 2, 3].map((k) => ({ nada: true, patas: [[0, -2, 0, 2][k], [0, 2, 0, -2][k]], onda: k * 2, cab: -1, sw: k % 2 })),
+    recolher: [{ recolhe: true, by: 1 }, { recolhe: true }],
+  }, tartarugaPose, { esquerda: true, fps: 2 }],
+  inseto: [12, 10, 6, {
+    parado: [{ asa: 0 }, { asa: 1 }, { asa: 2 }, { asa: 1 }],
+  }, insetoPose, { esquerda: true, fps: 16, relevo: 0 }],
+  ninho: [32, 16, 16, {
+    parado: [{}, { ov: [1, 0, 0] }, {}, { pulso: true }, { ov: [0, 0, -1] }, { pulso: true, pula: 1 }],
+    golpe: [{ ov: [-1, 1, 1], pula: 1, racha: true }, { ov: [1, -1, 0], racha: true }],
+  }, ninhoPose, { fps: 3 }],
+});
+
+// Para quem não é Inimigo (tartaruga, inseto, ninho): escolhe o quadro pela animação e
+// pelo tempo (fps da faixa, ou `fps` dado).
+export function quadroFauna(ent, an, tempo, fps) {
+  const A = ent._animI;
+  if (!A) return;
+  const l = A.f.indice[an] ?? A.f.indice.parado ?? A.f.indice.andar;
+  A.tex.offset.x = l[Math.floor(tempo * (fps ?? A.f.fps)) % l.length] / A.f.n;
+}
+
 TIPOS_INIMIGO.push('javali', 'planta', 'sapo', 'aranha', 'tartaruga', 'inseto', 'ninho', 'matriarca');
 // quadro 0 dos animados também serve de sprite estático (mesmas medidas)
 for (const [tipo, [w, h, , , desenho]] of Object.entries(ANIMADOS)) DESENHOS[tipo] = [w, h, (t) => desenho(t)];

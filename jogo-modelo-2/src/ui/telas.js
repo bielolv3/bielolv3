@@ -1,5 +1,8 @@
 // Telas cheias: título, pausa, derrota e vitória. Cada uma tem um botão principal
 // (Enter / A do controle aciona).
+import { retratoMacaco } from '../fx/macacos.js';
+
+const TRIO = () => `<div class="trio">${['hugo', 'chico', 'orlando'].map((n) => `<img class="px" alt="${n}" src="${retratoMacaco(n)}">`).join('')}</div>`;
 const CONTROLES = `
   <div class="controles so-teclado">
     <span><kbd>WASD</kbd></span><span>andar</span>
@@ -23,6 +26,7 @@ const MODELOS = {
     <div class="caixa">
       <h1>PRIMORDIA</h1>
       <div class="marca">Hills Co</div>
+      ${TRIO()}
       <p class="lema">Três macacos de rua procuravam Atlântida. Acharam um santuário de embarque — e uma máquina que ainda funciona.</p>
       <div class="fio"></div>
       <div class="acoes acoes-titulo"><button class="botao principal" data-acao="jogar">Jogar</button></div>

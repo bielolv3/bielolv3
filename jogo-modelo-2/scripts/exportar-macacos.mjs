@@ -1,6 +1,7 @@
 // Exporta a arte dos macacos gerada por código (src/fx/macacos.js) para conferência:
 //   referencias/folha-macacos.png            folha de contato (todos os quadros, vistas f/c/p)
 //   referencias/macacos/<nome>_<forma>.png   atlas usado no jogo (luz esq./dir. × vistas f/c/p)
+//   referencias/macacos/retratos.png         bustos do HUD/título (normal e Surto, 4×)
 // Uso: node scripts/exportar-macacos.mjs [escala=3]
 // Não precisa de build: serve a raiz do projeto e resolve 'three' por import map.
 import { createRequire } from 'module';
@@ -15,7 +16,7 @@ const escala = +(process.argv[2] ?? 3);
 const raiz = path.resolve('.');
 const pagina = `<!doctype html><script type="importmap">{"imports":{"three":"/node_modules/three/build/three.module.js"}}</script>
 <script type="module">
-import { folhaDeContato, montarFolha } from '/src/fx/macacos.js';
+import { folhaDeContato, montarFolha, retratoMacaco } from '/src/fx/macacos.js';
 window.pronto = (async () => {
   const out = { folha: folhaDeContato(${escala}).toDataURL() };
   const ms = {};
@@ -24,6 +25,13 @@ window.pronto = (async () => {
     ms[n + '_' + f] = Math.round(performance.now() - t0) + ' ms, ' + F.canvas.width + 'x' + F.canvas.height;
     out[n + '_' + f] = F.canvas.toDataURL();
   }
+  const rc = document.createElement('canvas'); rc.width = 6 * 28 * 4 + 5 * 8; rc.height = 28 * 4;
+  const rg = rc.getContext('2d'); rg.imageSmoothingEnabled = false; let k = 0;
+  for (const n of ['hugo', 'chico', 'orlando']) for (const f of ['normal', 'surto']) {
+    const im = new Image(); im.src = retratoMacaco(n, f); await im.decode();
+    rg.drawImage(im, k * (112 + 8), 0, 112, 112); k++;
+  }
+  out.retratos = rc.toDataURL();
   return { out, ms };
 })();
 </script>`;

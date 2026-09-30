@@ -161,7 +161,16 @@ export class Jogador extends Entidade {
     else if (rec.segurando) { an = 'segurar'; i = h > 0.4 ? ciclo(4, 1.6) : 0; }
     else if (h > 4.4) { an = 'correr'; i = ciclo(6, 2.3); }
     else if (h > 0.4) { an = 'andar'; i = ciclo(8, 1.8); }
-    else { an = 'parado'; i = Math.floor(A.t * 2.6) % 4; A.fase = 0; }
+    else {
+      an = 'parado'; i = Math.floor(A.t * 2.6) % 4; A.fase = 0;
+      // gesto ocioso ocasional (Hugo bate o pé, Chico coça a cabeça, Orlando mexe na chave)
+      A.ocioso = (A.ocioso ?? 0) + dt;
+      A.proxOcioso ??= 4 + Math.random() * 3;
+      const k = Math.floor((A.ocioso - A.proxOcioso) * 5), n = a.quadros('ocioso');
+      if (k >= 0 && k < n) { an = 'ocioso'; i = k; }
+      else if (k >= n) { A.ocioso = 0; A.proxOcioso = 5 + Math.random() * 5; }
+    }
+    if (an !== 'parado' && an !== 'ocioso') A.ocioso = 0;
     A.anim = an; A.quadro = i;
 
     // vista pela direção relativa à câmera (gira de 90 em 90°): dominante vertical na tela ->

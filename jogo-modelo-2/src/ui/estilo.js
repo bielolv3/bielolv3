@@ -17,11 +17,14 @@ body.em-tela .hud-jogo{opacity:0;visibility:hidden}
 .hud-canto{position:absolute;left:16px;top:14px;display:flex;gap:10px;align-items:flex-start;
   background:rgba(12,11,9,.72);border:2px solid rgba(58,51,42,.9);padding:6px 12px 6px 6px}
 .retratos{display:flex;gap:4px;align-items:flex-end}
-.retrato{position:relative;width:30px;height:30px;background:var(--tinta);border:2px solid var(--apagado);
-  background-repeat:no-repeat;background-size:auto 170%;background-position:50% 6%;opacity:.55;
+.retrato{position:relative;width:32px;height:32px;box-sizing:border-box;background:var(--tinta);border:2px solid var(--apagado);
+  background-repeat:no-repeat;background-size:100% 100%;background-position:0 0;opacity:.55;
   pointer-events:auto;padding:0;filter:saturate(.4)}
-.retrato.ativo{width:52px;height:52px;border-color:var(--mostarda);opacity:1;filter:none;
+.retrato.ativo{width:60px;height:60px;border-color:var(--mostarda);opacity:1;filter:none;
   box-shadow:0 0 0 2px var(--tinta)}
+/* título: os três bustos (fx/macacos.js retratoMacaco), 3× sem filtro */
+.trio{display:flex;justify-content:center;gap:10px;margin:6px 0 2px}
+.trio img{width:84px;height:84px;border:2px solid var(--apagado);box-shadow:0 0 0 2px var(--tinta)}
 .retrato.surto{border-color:var(--brasa);animation:pulso .5s steps(2) infinite}
 .retrato .tecla{position:absolute;right:-2px;bottom:-2px;background:var(--tinta);color:var(--osso2);
   font-size:10px;line-height:12px;padding:0 3px;border:1px solid var(--apagado)}
@@ -166,8 +169,9 @@ body.toque .toque-camada{display:block}
 /* celular deitado: HUD mais compacto, botões de toque menores */
 @media (max-height:480px) and (orientation:landscape){
   .hud-canto{left:10px;top:8px;padding:4px 8px 4px 4px}
-  .retrato.ativo{width:42px;height:42px}
+  .retrato.ativo{width:32px;height:32px}
   .retrato{width:24px;height:24px}
+  .trio img{width:56px;height:56px}
   .status{gap:3px}
   .titulo-sala{top:24%;padding:8px 16px}
   .titulo-sala h2{font-size:26px}
